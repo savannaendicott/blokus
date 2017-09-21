@@ -16,6 +16,9 @@ class Move(object):
         self.rot = rot
         self.flip = flip
 
+    def getPiece(self):
+        return self.piece
+
 class Board(object):
     """A Board describes the current state of the game board. It's separate from
     the game engine to allow the Input objects to check if their moves are valid,

@@ -12,6 +12,8 @@ class Piece(object):
     Variables:
     - x: Lists of x coordinates of the piece
     - y: Lists of y coordinates of the piece
+    - img : picture! png format
+    - id : used for visual representation in logs
 
     x and y each have 8 elements, which are:
     x/y[0]: Initial orientation
@@ -21,7 +23,7 @@ class Piece(object):
     x/y[k+4]: x/y[k] flipped horizontally
     """
 
-    def __init__(self, x_list, y_list):
+    def __init__(self, x_list, y_list, pid):
         if len(x_list) != len(y_list):
             raise ValueError(
                 "Length of x and y lists are unequal (%d and %d)" % \
@@ -38,6 +40,7 @@ class Piece(object):
         # Set up data structure
         self.x = []
         self.y = []
+        self.pieceId = pid
 
         # Position 0: default
         self.x.append(x_list)
@@ -68,6 +71,11 @@ class Piece(object):
         """
         return len(self.x[0])
 
+    def getId(self):
+        """Return string representing id
+        """
+        return self.pieceId
+
     def getTile(self, tile, x_offset=0, y_offset=0, rot=0, flip=False):
         """Return the (x,y) position of the <tile>th tile in this piece.
 
@@ -93,6 +101,14 @@ class PieceList(object):
 
     def __init__(self, fname):
         """Read the game pieces from the file <fname>
+
+        << Edit by Savanna Endicott >>
+        File format must be:
+        - Line 1: N (number of pieces)
+        - For k in [0, N):
+          - Line 1: piece id
+          - Line 2: L (number of lines in piece)
+          - Lines 3 - L+1: layout of piece (# means tile, O means center)
 
         File format must be:
         - Line 1: N (number of pieces)
@@ -121,9 +137,12 @@ class PieceList(object):
             x_list = []
             y_list = []
 
-            num_lines = int(lines[L])
+
+            pieceId = lines[L]
+            num_lines = int(lines[L+1])
             for j in range(num_lines):
-                line = lines[L+1+j]
+                #line = lines[L+1+j]
+                line = lines[L + 2 + j]
                 for k in range(len(line)):
                     if line[k] in ('O', 'o', '0'):
                         x_origin = k
@@ -134,9 +153,9 @@ class PieceList(object):
 
             x_list = [x - x_origin for x in x_list]
             y_list = [y - y_origin for y in y_list]
-            self.pieces.append(Piece(x_list, y_list))
+            self.pieces.append(Piece(x_list, y_list, pieceId))
 
-            L += 1 + num_lines
+            L += 2 + num_lines
         
     def getNumPieces(self):
         """Return the number of distinct pieces in the list.
@@ -175,7 +194,7 @@ def getPieceList():
 
 if __name__ == "__main__":
     # Test piece list loading
-    pl = PieceList("valid_pieces.txt")
+    pl = PieceList("valid_pieces2.txt")
     print pl.getNumPieces()
     for i in range(pl.getNumPieces()):
         print pl.getPiece(i).getNumTiles()
