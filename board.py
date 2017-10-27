@@ -1,4 +1,5 @@
 from pieces import PieceList
+import numpy
 
 class Move(object):
     """A Move describes how one of the players is going to spend their move.
@@ -9,7 +10,7 @@ class Move(object):
     - Rotation: how many times the piece should be rotated CW [0-3]
     - Flip: whether the piece should be flipped (True/False)
     """
-    def __init__(self, piece=0, x=0, y=0, rot=0, flip=False):
+    def __init__(self, piece, x=0, y=0, rot=0, flip=False):
         self.piece = piece
         self.x = x
         self.y = y
@@ -18,6 +19,11 @@ class Move(object):
 
     def getPiece(self):
         return self.piece
+
+    def describe(self):
+        flipStr = "flipped" if self.flip else ""
+        return "Piece "+ self.piece.getId() + " " + flipStr+" with center coordinate (%d, %d), " \
+             "rotation %d\n" % (self.x, self.y, self.rot)
 
 class Board(object):
     """A Board describes the current state of the game board. It's separate from
@@ -35,22 +41,17 @@ class Board(object):
       help understand the moves
     """
 
-    def __init__(self, board_w, board_h, piece_list):
+    def __init__(self, board_w, board_h, num_p):
         self.board_w = board_w
         self.board_h = board_h
+        self.game_over = False
 
         self._state = [[-1 for c in range(board_w)] for r in range(board_h)]
-
-        self._legal = [
-            [
-                [True for c in range(board_w)
-            ] for r in range(board_h)] 
-        for p in range(4)]
 
         self._connected = [
             [
                 [False for c in range(board_w)
-            ] for r in range(board_h)] 
+            ] for r in range(board_h)]
         for p in range(4)]
 
         # Set up initial corners for each player now
@@ -59,39 +60,17 @@ class Board(object):
         self._connected[2][self.board_h-1][             0] = True
         self._connected[3][self.board_h-1][self.board_h-1] = True
 
-        self.piece_list = piece_list
-
-    def addMove(self, player, move):
-        """Try to add <player>'s <move>.
-
-        If the move is legal, the board state is updated; if it's not legal, a
-        ValueError is raised.
-
-        Returns the number of tiles placed on the board.
-        """
-        if not self.checkMoveValid(player, move):
+    def addMove(self, p, move):
+        if not self.checkMoveValid(p, move):
             raise ValueError("Move is not allowed")
 
-        piece = self.piece_list.getPiece(move.piece)
-        
+        player = p.getId()
+        piece = move.getPiece()
+
         # Update internal state for each tile
-        for t in range(piece.getNumTiles()):
+        for t in range(move.getPiece().getNumTiles()):
             (x,y) = piece.getTile(t, move.x, move.y, move.rot, move.flip)
             self._state[y][x] = player
-
-            # Nobody can play on this square
-            for p in range(4):
-                self._legal[p][y][x] = False
-
-            # This player can't play next to this square
-            if x > 0:
-                self._legal[player][y][x-1] = False
-            if x < self.board_w-1:
-                self._legal[player][y][x+1] = False
-            if y > 0:
-                self._legal[player][y-1][x] = False
-            if y < self.board_h-1:
-                self._legal[player][y+1][x] = False
 
             # The diagonals are now attached
             if x > 0 and y > 0:
@@ -105,50 +84,24 @@ class Board(object):
 
         return piece.getNumTiles()
 
+    def getScore(self, player):
+        return player.getScore()
+
     def checkMoveValid(self, player, move):
-        """Check if <player> can legally perform <move>.
-
-        For a move to be valid, it must:
-        - Be completely in bounds
-        - Not be intersecting any other tiles
-        - Not be adjacent to any of the player's other pieces
-        - Be diagonally attached to one of the player's pieces or their corner
-
-        Return True if the move is legal or False otherwise.
-        """
-        piece = self.piece_list.getPiece(move.piece)
         attached_corner = False
 
-        for t in range(piece.getNumTiles()):
-            (x,y) = piece.getTile(t, move.x, move.y, move.rot, move.flip)
+        for t in range(move.getPiece().getNumTiles()):
+            (x,y) = move.getPiece().getTile(t, move.x, move.y, move.rot, move.flip)
 
             # If any tile is illegal, this move isn't valid
-            if not self.checkTileLegal(player, x, y):
+            if not self.checkTileLegal(player.getId(), x, y):
                 return False
 
-            if self.checkTileAttached(player, x, y):
+            if self._connected[player.getId()][y][x]:
                 attached_corner = True
 
             # If at least one tile is attached, this move is valid
         return attached_corner
-
-    def checkTileLegal(self, player, x, y):
-        """Check if it's legal for <player> to place one tile at (<x>, <y>).
-
-        Legal tiles:
-        - Are in bounds
-        - Don't intersect with existing tiles
-        - Aren't adjacent to the player's existing tiles
-
-        Returns True if legal or False if not.
-        """
-
-        # Make sure tile in bounds
-        if x < 0 or x >= self.board_w or y < 0 or y >= self.board_h:
-            return False
-
-        # Otherwise, it's in the lookup table
-        return self._legal[player][y][x]
 
     def checkTileAttached(self, player, x, y):
         """Check if (<x>, <y>) is diagonally attached to <player>'s moves.
@@ -166,6 +119,33 @@ class Board(object):
         return self._connected[player][y][x]
 
 
+    def checkTileLegal(self, player, x, y):
+        """Check if it's legal for <player> to place one tile at (<x>, <y>).
+        """
+
+        # Make sure tile in bounds
+        if x < 0 or x >= self.board_w or y < 0 or y >= self.board_h:
+            return False
+
+        if not self._state[y][x] == -1 :
+            return False
+
+        if y > 0 and self._state[y-1][x] == player: return False
+        if y < self.board_h -1 and self._state[y+1][x] == player: return False
+        if x > 0 and self._state[y][x-1] == player: return False
+        if x < self.board_w -1 and self._state[y][x+1] == player: return False
+        return True
 
     def getState(self, x, y):
         return self._state[y][x]
+
+    def getStates(self):
+        return self._state
+
+    def __eq__(self, other):
+        """Override the default Equals behavior"""
+        for w in range(self.board_w):
+            for h in range (self.board_h):
+                if not other.getState(w,h) == self.getState(w,h):
+                    return False
+        return True

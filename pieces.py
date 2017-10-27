@@ -141,7 +141,6 @@ class PieceList(object):
             pieceId = lines[L]
             num_lines = int(lines[L+1])
             for j in range(num_lines):
-                #line = lines[L+1+j]
                 line = lines[L + 2 + j]
                 for k in range(len(line)):
                     if line[k] in ('O', 'o', '0'):
@@ -156,7 +155,7 @@ class PieceList(object):
             self.pieces.append(Piece(x_list, y_list, pieceId))
 
             L += 2 + num_lines
-        
+
     def getNumPieces(self):
         """Return the number of distinct pieces in the list.
         """
@@ -169,6 +168,12 @@ class PieceList(object):
             raise ValueError("Can't retrieve piece %d" % n)
 
         return self.pieces[n]
+
+    def remove(self, p):
+        self.pieces.remove(p)
+
+    def getPieces(self):
+        return self.pieces
 
 """global_piece_list: A shared PieceList object. Use the following functions to 
 access it from other modules.
