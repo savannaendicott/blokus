@@ -17,7 +17,7 @@ class Move(object):
         self.rot = rot
         self.flip = flip
 
-    def getPiece(self):
+    def get_piece(self):
         return self.piece
 
     def describe(self):
@@ -60,15 +60,15 @@ class Board(object):
         self._connected[2][self.board_h-1][             0] = True
         self._connected[3][self.board_h-1][self.board_h-1] = True
 
-    def addMove(self, p, move):
-        if not self.checkMoveValid(p, move):
+    def add_move(self, p, move):
+        if not self.check_move_valid(p, move):
             raise ValueError("Move is not allowed")
 
         player = p.getId()
-        piece = move.getPiece()
+        piece = move.get_piece()
 
         # Update internal state for each tile
-        for t in range(move.getPiece().getNumTiles()):
+        for t in range(move.get_piece().getNumTiles()):
             (x,y) = piece.getTile(t, move.x, move.y, move.rot, move.flip)
             self._state[y][x] = player
 
@@ -84,17 +84,14 @@ class Board(object):
 
         return piece.getNumTiles()
 
-    def getScore(self, player):
-        return player.getScore()
-
-    def checkMoveValid(self, player, move):
+    def check_move_valid(self, player, move):
         attached_corner = False
 
-        for t in range(move.getPiece().getNumTiles()):
-            (x,y) = move.getPiece().getTile(t, move.x, move.y, move.rot, move.flip)
+        for t in range(move.get_piece().getNumTiles()):
+            (x,y) = move.get_piece().getTile(t, move.x, move.y, move.rot, move.flip)
 
             # If any tile is illegal, this move isn't valid
-            if not self.checkTileLegal(player.getId(), x, y):
+            if not self.check_tile_legal(player.getId(), x, y):
                 return False
 
             if self._connected[player.getId()][y][x]:
@@ -103,7 +100,7 @@ class Board(object):
             # If at least one tile is attached, this move is valid
         return attached_corner
 
-    def checkTileAttached(self, player, x, y):
+    def check_tile_attached(self, player, x, y):
         """Check if (<x>, <y>) is diagonally attached to <player>'s moves.
 
         Note that this does not check if this move is legal.
@@ -119,7 +116,7 @@ class Board(object):
         return self._connected[player][y][x]
 
 
-    def checkTileLegal(self, player, x, y):
+    def check_tile_legal(self, player, x, y):
         """Check if it's legal for <player> to place one tile at (<x>, <y>).
         """
 
@@ -136,16 +133,26 @@ class Board(object):
         if x < self.board_w -1 and self._state[y][x+1] == player: return False
         return True
 
-    def getState(self, x, y):
+    def get_state(self, x, y):
         return self._state[y][x]
-
-    def getStates(self):
-        return self._state
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
         for w in range(self.board_w):
-            for h in range (self.board_h):
-                if not other.getState(w,h) == self.getState(w,h):
+            for h in range(self.board_h):
+                if not other.get_state(w,h) == self.getState(w,h):
                     return False
         return True
+
+    def print_state(self):
+        for i in range(self.board_h):
+            str = ""
+            for j in range(self.board_w):
+                str+= "[%d]" % self._state[j][i]
+            print str
+
+# class GameState(Object):
+#     def __init__(self, board, players):
+#         self.players = players
+#         self.board = board
+

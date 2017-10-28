@@ -15,7 +15,7 @@ class Display(object):
 
     display_error_string = "Error: using base display class"
 
-    def drawBoard(self, board):
+    def draw_board(self, board):
         """Draw the board onto the screen, command line, etc
         """
         raise NotImplementedError(display_error_string)
@@ -25,13 +25,13 @@ class NoDisplay(Display):
     iterations of the game.
     """
 
-    def drawBoard(self, board):
+    def draw_board(self, board):
         pass
 
 class CLIDisplay(Display):
     """The CLIDisplay class prints the game board to the command line
     """
-    def drawBoard(self, board):
+    def draw_board(self, board):
         str_horiz = "+" + "-"*board.board_w + "+"
 
         color_fore = [
@@ -54,7 +54,7 @@ class CLIDisplay(Display):
         for r in range(board.board_h):
             str_line = "|"
             for c in range(board.board_w):
-                state_xy = board.getState(c, r)
+                state_xy = board.get_state(c, r)
                 if state_xy == -1:
                     str_line += color_reset + "."
                 else:

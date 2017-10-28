@@ -15,25 +15,32 @@ class Player(object):
         self._score = 89
         self._passed = False
 
-    def playPiece(self, piece):
-        self.removePieceByID(piece.getId())
-        #self._pieces.remove(piece)
-        self._score -= piece.getNumTiles()
-
-    def removePieceByID(self, id):
-        for piece in self._pieces:
-            if id == piece.getId():
-                self._pieces.remove(piece)
-                return
-
-    def getMove(self, board, players):
+    def get_move(self, board, players):
         raise NotImplementedError("Error: using base input class")
 
 
-    def getType(self):
+    def get_type(self):
         raise NotImplementedError("Error: using base input class")
 
-    def getLegalMoves(self, board, biggestFirst = False):
+    def passTurn(self):
+        self._passed = True
+
+    def get_color(self):
+        return self._colour
+
+    def passed(self):
+        return self._passed
+
+    def getScore(self):
+        return self._score
+
+    def getId(self):
+        return self.id
+
+    def getNumPieces(self):
+        return self._pieces.__len__()
+
+    def get_legal_moves(self, board, biggestFirst = False):
 
         # Get a list of unique (x, y) points that might be legal
         # Check for all legal diagonal points and consider all points in a
@@ -43,10 +50,10 @@ class Player(object):
         xy_list = []
         for x in range(0, 20):
             for y in range(0, 20):
-                if not board.checkTileLegal(self.id, x, y):
+                if not board.check_tile_legal(self.id, x, y):
                     continue
-                if board.checkTileAttached(self.id, x, y):
-                    min_x = max(0, x - 2)
+                if board.check_tile_attached(self.id, x, y):
+                    min_x = max(0, x- 2)
                     max_x = min(20, x + 3)
                     min_y = max(0, y - 2)
                     max_y = min(20, y + 3)
@@ -66,44 +73,37 @@ class Player(object):
                 for rot in range(0, 4):
                     for flip in [False, True]:
                         new_move = Move(piece, x, y, rot, flip)
-                        if board.checkMoveValid(self, new_move):
+                        if board.check_move_valid(self, new_move):
                             move_list.append(new_move)
                             # new_move.describe(board.piece_list.getPiece(piece).getId())
         return move_list
 
-    def printPieces(self):
+    def print_pieces(self):
         piecesLeftStr = ""
         for piece in self._pieces:
             piecesLeftStr += piece.getId() + " "
         print self._colour + "'s pieces: " + piecesLeftStr
 
-    def passTurn(self):
-        self._passed = True
+    def play_piece(self, piece):
+        self.remove_piece_by_id(piece.getId())
+        #self._pieces.remove(piece)
+        self._score -= piece.getNumTiles()
 
-    def getColor(self):
-        return self._colour
-
-    def passed(self):
-        return self._passed
-
-    def getScore(self):
-        return self._score
-
-    def getId(self):
-        return self.id
-
-    def getNumPieces(self):
-        return self._pieces.__len__()
+    def remove_piece_by_id(self, id):
+        for piece in self._pieces:
+            if id == piece.getId():
+                self._pieces.remove(piece)
+                return
 
 class RandomPlayer(Player):
     """RandomInput players choose random moves (equally distributed over piece
     number, x/y, and rotation/flip)
     """
-    def getMove(self, board, players, biggest_first=False):
+    def get_move(self, board, players, biggest_first=False):
         import random
-        move_list = self.getLegalMoves(board, biggest_first)
+        move_list = self.get_legal_moves(board, biggest_first)
 
-        self.printPieces()
+        self.print_pieces()
 
         # Pass if there are none
         if move_list.__len__() == 0:
@@ -116,7 +116,7 @@ class RandomPlayer(Player):
             move = move_list[n]
             return move_list[n]
 
-    def getType(self):
+    def get_type(self):
         return "random player"
 
 class State(object):
@@ -137,41 +137,50 @@ class AlphaBetaAI(Player):
             sys.exit(1)
 
         self.strategy = strategy
+        self.alphacount = 0
         self.maxDepth = maxDepth
         self.visited = []
         self.players = None
 
-    def setPlayers(self, players):
+    def set_players(self, players):
         self.players = players
 
-    def getMove(self, board, players):
-        if self.players == None : self.setPlayers(players)
-        self.printPieces()
+    def get_move(self, board, players):
+        if self.players == None : self.set_players(players)
+        self.print_pieces()
+        print "Starting state : "
+        print board.print_state()
         value, move = self.alpha_beta(State(board, self, 0),0, -100000, 100000, self)
-        if not move == None : self.playPiece(move.getPiece())
+        if not move == None : self.play_piece(move.get_piece())
         return move
 
     # takes less than a second
     def expand(self, state, player):
         children = []
-        possibleMoves = self.getLegalMoves(state.board, True)
+        possible_moves = self.get_legal_moves(state.board, True)
        # print possibleMoves.__len__()
-        for move in possibleMoves:
-            if state.board.checkMoveValid(player, move):
+        for move in possible_moves:
+            if state.board.check_move_valid(player, move):
                 board = copy.deepcopy(state.board)
-                board.addMove(player, move)
-                print move.describe()# print played piece
-                self.printPieces()# print players pieces
+                board.add_move(player, move)
+                #print move.describe()# print played piece
+                #self.print_pieces()# print players pieces
                 child = State(board, player, move)
                 if not self.already_visited(child):
                     children.append(child)
+        print "%d children from expansion" % children.__len__()
         return children
+
 
     # AlphaBetaSearch performs the alpha beta pruning
     # on min max algorithm and return the best position
     def alpha_beta(self, state, depth, alpha, beta, player):
+        self.alphacount +=1
+        if self.alphacount == 4 : return None
         best = None
         children = self.expand(state, player)
+        if self.alphacount > 1 :
+            state.board.print_state()
         print "depth: %d, %d children nodes" % (depth, children.__len__())
 
         if children.__len__==0 or state.board.game_over or depth == self.maxDepth:
@@ -181,7 +190,7 @@ class AlphaBetaAI(Player):
             bestValue = alpha
             for child in children :
                 #print child.board.piece_list.getPiece(child.move.getPiece())
-                value = self.alpha_beta(child, depth + 1, bestValue, beta, self.nextPlayer(player))
+                value = self.alpha_beta(child, depth + 1, bestValue, beta, self.next_player(player))
                 bestValue = max(bestValue, value)
                 best = child.move
                 if(beta <= bestValue): break
@@ -189,7 +198,7 @@ class AlphaBetaAI(Player):
         else:
             bestValue = beta
             for child in children:
-                value = self.alpha_beta(child, depth + 1, alpha, bestValue, self.nextPlayer(player))
+                value = self.alpha_beta(child, depth + 1, alpha, bestValue, self.next_player(player))
                 bestValue = min(bestValue, value)
                 best = child.move
                 if bestValue <= alpha : break
@@ -198,13 +207,13 @@ class AlphaBetaAI(Player):
 
     def assign_value(self, board):
         if(self.strategy == 0):
-            return self.diffRemainingPieceSize()
+            return self.diff_remaining_piece_size()
         elif(self.strategy ==1):
-            return self.diffRemainingTiles()
+            return self.diff_remaining_tiles()
         elif(self.strategy == 2):
-            return self.diffRemainingPieceSize() + self.diffRemainingTiles()
+            return self.diff_remaining_piece_size() + self.diff_remaining_tiles()
 
-    def diffRemainingPieceSize(self):
+    def diff_remaining_piece_size(self):
         total = 0
 
         # difference between average size of your remaining pieces and average size of their remaining pieces
@@ -218,7 +227,7 @@ class AlphaBetaAI(Player):
 
         return total
 
-    def diffRemainingTiles(self):
+    def diff_remaining_tiles(self):
         total = 0
         for p in self.players:
             if not p == self.player:
@@ -226,7 +235,7 @@ class AlphaBetaAI(Player):
 
         return total
 
-    def nextPlayer(self, player):
+    def next_player(self, player):
         if player.getId() == self.players.__len__() - 1:
             return self.players[0]
         else: return self.players[player.getId() + 1]
@@ -237,5 +246,5 @@ class AlphaBetaAI(Player):
                 return True
         return False
 
-    def getType(self):
+    def get_type(self):
         return "AI"

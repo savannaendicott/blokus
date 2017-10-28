@@ -63,7 +63,7 @@ class Piece(object):
             self.x.append(negateList(self.x[i]))
             self.y.append(self.y[i])
 
-        print self.x
+        #print self.x
 
     def getNumTiles(self):
         """Return the number of tiles in this block. Helpful for iterating 
