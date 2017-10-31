@@ -22,7 +22,7 @@ class Move(object):
 
     def describe(self):
         flipStr = "flipped" if self.flip else ""
-        return "Piece "+ self.piece.getId() + " " + flipStr+" with center coordinate (%d, %d), " \
+        return "Piece "+ self.piece.get_id() + " " + flipStr+" with center coordinate (%d, %d), " \
              "rotation %d\n" % (self.x, self.y, self.rot)
 
 class Board(object):
@@ -64,12 +64,12 @@ class Board(object):
         if not self.check_move_valid(p, move):
             raise ValueError("Move is not allowed")
 
-        player = p.getId()
+        player = p.get_id()
         piece = move.get_piece()
 
         # Update internal state for each tile
-        for t in range(move.get_piece().getNumTiles()):
-            (x,y) = piece.getTile(t, move.x, move.y, move.rot, move.flip)
+        for t in range(move.get_piece().get_num_tiles()):
+            (x,y) = piece.get_tile(t, move.x, move.y, move.rot, move.flip)
             self._state[y][x] = player
 
             # The diagonals are now attached
@@ -82,19 +82,19 @@ class Board(object):
             if x < self.board_w-1 and y > 0:
                 self._connected[player][y-1][x+1] = True
 
-        return piece.getNumTiles()
+        return piece.get_num_tiles()
 
     def check_move_valid(self, player, move):
         attached_corner = False
 
-        for t in range(move.get_piece().getNumTiles()):
-            (x,y) = move.get_piece().getTile(t, move.x, move.y, move.rot, move.flip)
+        for t in range(move.get_piece().get_num_tiles()):
+            (x,y) = move.get_piece().get_tile(t, move.x, move.y, move.rot, move.flip)
 
             # If any tile is illegal, this move isn't valid
-            if not self.check_tile_legal(player.getId(), x, y):
+            if not self.check_tile_legal(player.get_id(), x, y):
                 return False
 
-            if self._connected[player.getId()][y][x]:
+            if self._connected[player.get_id()][y][x]:
                 attached_corner = True
 
             # If at least one tile is attached, this move is valid
@@ -146,10 +146,11 @@ class Board(object):
 
     def print_state(self):
         for i in range(self.board_h):
-            str = ""
-            for j in range(self.board_w):
-                str+= "[%d]" % self._state[j][i]
-            print str
+            str = "["
+            for j in range(self.board_w - 1):
+                str+= "%d," % self._state[j][i]
+
+            print str + "%d]" % self._state[self.board_w -1][i]
 
 # class GameState(Object):
 #     def __init__(self, board, players):

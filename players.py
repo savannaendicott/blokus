@@ -22,7 +22,7 @@ class Player(object):
     def get_type(self):
         raise NotImplementedError("Error: using base input class")
 
-    def passTurn(self):
+    def pass_turn(self):
         self._passed = True
 
     def get_color(self):
@@ -31,14 +31,18 @@ class Player(object):
     def passed(self):
         return self._passed
 
-    def getScore(self):
+    def get_score(self):
         return self._score
 
-    def getId(self):
+    def get_id(self):
         return self.id
 
-    def getNumPieces(self):
+    def get_num_pieces(self):
         return self._pieces.__len__()
+
+    def get_biggest_piece_size(self):
+        return self._pieces[0].get_num_tiles()
+
 
     def get_legal_moves(self, board, biggestFirst = False):
 
@@ -66,7 +70,7 @@ class Player(object):
         # Generate all legal moves
         move_list = []
         for piece in self._pieces:
-            if biggestFirst and piece.getNumTiles() < max_size :
+            if biggestFirst and piece.get_num_tiles() < max_size :
                 if move_list.__len__ == 0 : max_size -= 1
                 else: break
             for (x, y) in xy_list:
@@ -75,23 +79,29 @@ class Player(object):
                         new_move = Move(piece, x, y, rot, flip)
                         if board.check_move_valid(self, new_move):
                             move_list.append(new_move)
-                            # new_move.describe(board.piece_list.getPiece(piece).getId())
+                            # new_move.describe(board.piece_list.get_piece(piece).get_id())
         return move_list
 
     def print_pieces(self):
         piecesLeftStr = ""
         for piece in self._pieces:
-            piecesLeftStr += piece.getId() + " "
+            piecesLeftStr += piece.get_id() + " "
         print self._colour + "'s pieces: " + piecesLeftStr
 
+    def get_pieces_str(self):
+        piecesLeftStr = ""
+        for piece in self._pieces:
+            piecesLeftStr += piece.get_id() + " "
+        return self._colour + "'s pieces: " + piecesLeftStr
+
     def play_piece(self, piece):
-        self.remove_piece_by_id(piece.getId())
+        self.remove_piece_by_id(piece.get_id())
         #self._pieces.remove(piece)
-        self._score -= piece.getNumTiles()
+        self._score -= piece.get_num_tiles()
 
     def remove_piece_by_id(self, id):
         for piece in self._pieces:
-            if id == piece.getId():
+            if id == piece.get_id():
                 self._pieces.remove(piece)
                 return
 
@@ -113,7 +123,7 @@ class RandomPlayer(Player):
         # Otherwise, pick a random move
         else:
             n = random.randint(0, len(move_list) - 1)
-            move = move_list[n]
+            #move = move_list[n]
             return move_list[n]
 
     def get_type(self):
@@ -129,15 +139,14 @@ class AlphaBetaAI(Player):
     """ strategy is which function will be called as the heuristic, represented as an int
     """
 
-    def __init__(self, ps, index, strategy=0, maxDepth = 5):
+    def __init__(self, ps, index, strategy=0, maxDepth = 3):
         super(AlphaBetaAI, self).__init__(ps, index)
 
-        if(strategy < 0 or strategy > 2):
+        if(strategy < 0 or strategy > 3):
             print "Error: invalid strategy %d" % strategy
             sys.exit(1)
 
         self.strategy = strategy
-        self.alphacount = 0
         self.maxDepth = maxDepth
         self.visited = []
         self.players = None
@@ -148,16 +157,16 @@ class AlphaBetaAI(Player):
     def get_move(self, board, players):
         if self.players == None : self.set_players(players)
         self.print_pieces()
-        print "Starting state : "
-        print board.print_state()
+        #print "Starting state : "
+        #print board.print_state()
         value, move = self.alpha_beta(State(board, self, 0),0, -100000, 100000, self)
-        if not move == None : self.play_piece(move.get_piece())
+       # if not move == None : self.play_piece(move.get_piece())
         return move
 
     # takes less than a second
     def expand(self, state, player):
         children = []
-        possible_moves = self.get_legal_moves(state.board, True)
+        possible_moves = self.get_legal_moves(state.board, False)
        # print possibleMoves.__len__()
         for move in possible_moves:
             if state.board.check_move_valid(player, move):
@@ -168,28 +177,24 @@ class AlphaBetaAI(Player):
                 child = State(board, player, move)
                 if not self.already_visited(child):
                     children.append(child)
-        print "%d children from expansion" % children.__len__()
+       # print "%d children from expansion" % children.__len__()
         return children
 
 
     # AlphaBetaSearch performs the alpha beta pruning
     # on min max algorithm and return the best position
     def alpha_beta(self, state, depth, alpha, beta, player):
-        self.alphacount +=1
-        if self.alphacount == 4 : return None
         best = None
         children = self.expand(state, player)
-        if self.alphacount > 1 :
-            state.board.print_state()
-        print "depth: %d, %d children nodes" % (depth, children.__len__())
+        #print "depth: %d, %d children nodes" % (depth, children.__len__())
 
         if children.__len__==0 or state.board.game_over or depth == self.maxDepth:
-            return state.move, self.assign_value(state.board)
+            return state.move, self.assign_value(state.board, state.move)
 
-        if player.getId() == self.getId():
+        if player.get_id() == self.get_id():
             bestValue = alpha
             for child in children :
-                #print child.board.piece_list.getPiece(child.move.getPiece())
+                #print child.board.piece_list.get_piece(child.move.get_piece())
                 value = self.alpha_beta(child, depth + 1, bestValue, beta, self.next_player(player))
                 bestValue = max(bestValue, value)
                 best = child.move
@@ -205,13 +210,15 @@ class AlphaBetaAI(Player):
 
         return beta, best
 
-    def assign_value(self, board):
+    def assign_value(self, board, move):
         if(self.strategy == 0):
             return self.diff_remaining_piece_size()
         elif(self.strategy ==1):
             return self.diff_remaining_tiles()
         elif(self.strategy == 2):
-            return self.diff_remaining_piece_size() + self.diff_remaining_tiles()
+            return self.diff_remaining_piece_size() + self.diff_remaining_tiles() + self.bigger_first(move)
+        elif(self.strategy == 4):
+            return self.bigger_first(move)*2 + self.diff_remaining_tiles()
 
     def diff_remaining_piece_size(self):
         total = 0
@@ -219,26 +226,29 @@ class AlphaBetaAI(Player):
         # difference between average size of your remaining pieces and average size of their remaining pieces
         average_remaining = []
         for player in self.players:
-            average_remaining.append(player.getScore() / self.getNumPieces())
+            average_remaining.append(player.get_score() / self.get_num_pieces())
 
         for i in range(self.players.__len__()):
-            if i != self.getId():
-                total += average_remaining[self.getId()] - average_remaining[i]
+            if i != self.get_id():
+                total += average_remaining[self.get_id()] - average_remaining[i]
 
         return total
+
+    def bigger_first(self, move):
+        return move.piece.get_num_tiles()
 
     def diff_remaining_tiles(self):
         total = 0
         for p in self.players:
-            if not p == self.player:
-                total += p.getScore() - self.getScore()
+            if not p.get_id() == self.get_id():
+                total += p.get_score() - self.get_score()
 
         return total
 
     def next_player(self, player):
-        if player.getId() == self.players.__len__() - 1:
+        if player.get_id() == self.players.__len__() - 1:
             return self.players[0]
-        else: return self.players[player.getId() + 1]
+        else: return self.players[player.get_id() + 1]
 
     def already_visited(self, node):
         for seenNode in self.visited:
@@ -247,4 +257,4 @@ class AlphaBetaAI(Player):
         return False
 
     def get_type(self):
-        return "AI"
+        return "AI-"+ str(self.strategy)

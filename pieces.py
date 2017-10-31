@@ -65,18 +65,18 @@ class Piece(object):
 
         #print self.x
 
-    def getNumTiles(self):
+    def get_num_tiles(self):
         """Return the number of tiles in this block. Helpful for iterating 
         through each tile.
         """
         return len(self.x[0])
 
-    def getId(self):
+    def get_id(self):
         """Return string representing id
         """
         return self.pieceId
 
-    def getTile(self, tile, x_offset=0, y_offset=0, rot=0, flip=False):
+    def get_tile(self, tile, x_offset=0, y_offset=0, rot=0, flip=False):
         """Return the (x,y) position of the <tile>th tile in this piece.
 
         x_offset, y_offset, rot, and flip are provided to help easily calculate 
@@ -156,12 +156,12 @@ class PieceList(object):
 
             L += 2 + num_lines
 
-    def getNumPieces(self):
+    def get_num_pieces(self):
         """Return the number of distinct pieces in the list.
         """
         return len(self.pieces)
 
-    def getPiece(self, n):
+    def get_piece(self, n):
         """Return piece <n> from this list.
         """
         if n < 0:
@@ -172,7 +172,7 @@ class PieceList(object):
     def remove(self, p):
         self.pieces.remove(p)
 
-    def getPieces(self):
+    def get_pieces(self):
         return self.pieces
 
 """global_piece_list: A shared PieceList object. Use the following functions to 
@@ -192,7 +192,7 @@ def initPieceList(fname):
 
     global_piece_list = PieceList(fname)
 
-def getPieceList():
+def get_pieceList():
     """Return the shared global piece list.
     """
     return global_piece_list
@@ -200,6 +200,6 @@ def getPieceList():
 if __name__ == "__main__":
     # Test piece list loading
     pl = PieceList("valid_pieces2.txt")
-    print pl.getNumPieces()
-    for i in range(pl.getNumPieces()):
-        print pl.getPiece(i).getNumTiles()
+    print pl.get_num_pieces()
+    for i in range(pl.get_num_pieces()):
+        print pl.get_piece(i).get_num_tiles()
