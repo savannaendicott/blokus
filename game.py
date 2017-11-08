@@ -55,6 +55,7 @@ class GameEngine(object):
         self.turn_num += 1
         passed = 0
 
+        print "turn %d" % self.turn_num
         for p in self.players:
             if p.passed():
                 passed += 1
@@ -67,58 +68,60 @@ class GameEngine(object):
                 startTime = int(round(time.time() * 1000))
                 #print p.get_color()+"'s turn "
                 move = p.get_move(self.board, self.players)
-                if not move == None : p.play_piece(move.get_piece())
+                print "move:"+ str(move) +" from " + p.get_type()
+                if not move is None : p.play_piece(move.get_piece())
                 #print "Done in %d ms" % (int(round(time.time() * 1000)) - startTime)
                 if move is None:
                    # print p.get_color() + " passed"
                     p.pass_turn()
                     break
 
-                self._moves[p.get_id()].append(move.describe())
                 #print "Move: "+ move.describe()
                 try:
                     self.board.add_move(p, move)
+                    #print move.raw()
+                    self._moves[p.get_id()].append(move.raw())
                     break
                 except ValueError as e:
                     print "Error: move is illegal. Try again:"
     def _print_results(self):
+        print self._get_winner().get_color() +" is the winner!"
+        print self._get_results()
+
+    def _get_winner(self):
         min = 1000
-        winner = None
+        winner = -1
+        index = 0
         for p in self.players:
             if (p.get_score() < min):
-                winner = p
+                winner = index
                 min = p.get_score()
+            index += 1
 
-        print winner.get_color() + "(" +winner.get_type() +"): is the winner!"
-        for p in self.players:
-            print p.get_color() + "(" +p.get_type() +"): %d pts" % p.get_score()
-            p.print_pieces()
+        return winner
 
     def _get_results(self):
         str = ""
         for p in self.players:
-            str+= p.get_color() + "(" + p.get_type() + "): %d pts" % p.get_score()+"\n"
-            str += p.get_pieces_str()
+            str+= p.get_color() + "(" + p.get_type() + "): %d pts" % p.get_score()+" with remaining pieces:\n"
+            str += "   " +p.get_pieces_str()+"\n"
         return str
 
     def print_moves(self):
         str = ""
         for player in self.players:
-            str += player.get_color()+"'s moves:\n----------------\n"
+            str += "\n" + player.get_color()+"'s moves:\n----------------\n"
             for move in self._moves[player.get_id()]:
                 str += move + "\n"
         return str
 
     def play_game(self):
-        file_object = open("log.txt", "w")
-
-        file_object.write("\n\nNew Game...")
         while not self.board.game_over:
             self._play_turn()
-            file_object.write(self._get_results())
 
-        file_object.write(self.print_moves())
-        file_object.close()
+        str = self._get_results() + self.print_moves()
+
+        return self._get_winner() , str
 
     def get_piece_list(self,fname):
         """Read the game pieces from the file <fname>
@@ -179,31 +182,50 @@ class GameEngine(object):
         return pieces
 
 def test_bots():
-    num_games = 20
-    num_bots = 4
+    file_name = "logs/log-"+time.strftime("%d%m%Y")+".txt"
+    file_object = open(file_name, "a")
+    num_games = 2
     player_types = ["AB_0", "AB_1", "AB_2", "AB_3", "R"]
+    win_count = [0] * 5
+    played_games = [0] * 5
 
     disp = NoDisplay()
 
-   # results = []
+    file_object.write(time.strftime("%c")+"\n")
+
+    results = []
     for i in range(num_games):
         players = []
-        for i in range(4):
-            players.append(player_types[randint(0, 5)])
+        player_str = ""
+        for j in range(4):
+            players.append(player_types[randint(0, 4)])
+            player_str += players[j]+" "
 
+        print players
+        for str in players:
+            played_games[getIndex(str, player_types)] += 1
+        file_object.write("New Game with players "+ player_str)
         engine = GameEngine(disp, players)
-        engine.play_game()
+        startTime = int(round(time.time() * 1000))
+        result, str = engine.play_game()
+        win_count[getIndex(players[result], player_types)] +=1
 
-    win_count = [0] * num_bots
-    for i in range(num_games):
-        winner = np.argmax(results[i])
-        print "Game %d:" % i+1
-        for j in range(num_bots):
-            print "%2d" % results[i][j]
-        win_count[winner] += 1
-    print "Overall:"
-    for i in range(num_bots):
-        print "%2d" % win_count[i]
+        file_object.write("Done in %d ms" % (int(round(time.time() * 1000)) - startTime))
+        results.append(result)
+        file_object.write(str+"\n\n")
+
+    file_object.write("\n\n-----------------\nOVERALL:")
+    for i in range(player_types.__len__()):
+        if played_games[i] == 0: percent = 0
+        else: percent = win_count[i] / played_games[i]
+        file_object.write("%d wins / %d games played = %.2f" % (win_count[i], played_games[i], percent))
+
+    file_object.close()
+
+def getIndex(str, array):
+    for i in range(array.__len__()):
+        if array[i] == str:
+            return i
 
 def main():
     disp = CLIDisplay()
@@ -212,6 +234,7 @@ def main():
     engine.play_game()
 
 if __name__ == "__main__":
-    main()
-    #test_bots()
+    test_bots()
+    #main()
+
     

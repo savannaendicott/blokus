@@ -18,7 +18,6 @@ class Player(object):
     def get_move(self, board, players):
         raise NotImplementedError("Error: using base input class")
 
-
     def get_type(self):
         raise NotImplementedError("Error: using base input class")
 
@@ -43,7 +42,6 @@ class Player(object):
     def get_biggest_piece_size(self):
         return self._pieces[0].get_num_tiles()
 
-
     def get_legal_moves(self, board, biggestFirst = False):
 
         # Get a list of unique (x, y) points that might be legal
@@ -66,7 +64,6 @@ class Player(object):
                             xy_list.append((xi, yi))
         xy_list = sorted(set(xy_list))
 
-        print
         # Generate all legal moves
         move_list = []
         for piece in self._pieces:
@@ -105,6 +102,13 @@ class Player(object):
                 self._pieces.remove(piece)
                 return
 
+    def play_move(self, piece_id, x, y, rot, flip):
+        move = None
+        for piece in self._pieces:
+            if piece.get_id == piece_id:
+                move = Move(piece,x,y,rot,flip)
+        return move
+
 class RandomPlayer(Player):
     """RandomInput players choose random moves (equally distributed over piece
     number, x/y, and rotation/flip)
@@ -113,17 +117,12 @@ class RandomPlayer(Player):
         import random
         move_list = self.get_legal_moves(board, biggest_first)
 
-        self.print_pieces()
-
-        # Pass if there are none
         if move_list.__len__() == 0:
             print "No move chosen"
             return None
 
-        # Otherwise, pick a random move
         else:
             n = random.randint(0, len(move_list) - 1)
-            #move = move_list[n]
             return move_list[n]
 
     def get_type(self):
@@ -156,28 +155,19 @@ class AlphaBetaAI(Player):
 
     def get_move(self, board, players):
         if self.players == None : self.set_players(players)
-        self.print_pieces()
-        #print "Starting state : "
-        #print board.print_state()
-        value, move = self.alpha_beta(State(board, self, 0),0, -100000, 100000, self)
-       # if not move == None : self.play_piece(move.get_piece())
+        value, move = self.alpha_beta(State(board, self, None),0, -100000, 100000, self)
         return move
 
-    # takes less than a second
     def expand(self, state, player):
         children = []
         possible_moves = self.get_legal_moves(state.board, False)
-       # print possibleMoves.__len__()
         for move in possible_moves:
             if state.board.check_move_valid(player, move):
                 board = copy.deepcopy(state.board)
                 board.add_move(player, move)
-                #print move.describe()# print played piece
-                #self.print_pieces()# print players pieces
                 child = State(board, player, move)
                 if not self.already_visited(child):
                     children.append(child)
-       # print "%d children from expansion" % children.__len__()
         return children
 
 
@@ -189,7 +179,8 @@ class AlphaBetaAI(Player):
         #print "depth: %d, %d children nodes" % (depth, children.__len__())
 
         if children.__len__==0 or state.board.game_over or depth == self.maxDepth:
-            return state.move, self.assign_value(state.board, state.move)
+            if not state.move == None:
+                return self.assign_value(state.board, state.move), state.move
 
         if player.get_id() == self.get_id():
             bestValue = alpha
@@ -219,6 +210,7 @@ class AlphaBetaAI(Player):
             return self.diff_remaining_piece_size() + self.diff_remaining_tiles() + self.bigger_first(move)
         elif(self.strategy == 4):
             return self.bigger_first(move)*2 + self.diff_remaining_tiles()
+        else: return 0
 
     def diff_remaining_piece_size(self):
         total = 0

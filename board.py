@@ -25,6 +25,10 @@ class Move(object):
         return "Piece "+ self.piece.get_id() + " " + flipStr+" with center coordinate (%d, %d), " \
              "rotation %d\n" % (self.x, self.y, self.rot)
 
+    def raw(self):
+         return self.piece.get_id() +", %d, %d, %d, %d" %(self.x,self.y,self.rot, self.flip)
+
+
 class Board(object):
     """A Board describes the current state of the game board. It's separate from
     the game engine to allow the Input objects to check if their moves are valid,
@@ -151,9 +155,3 @@ class Board(object):
                 str+= "%d," % self._state[j][i]
 
             print str + "%d]" % self._state[self.board_w -1][i]
-
-# class GameState(Object):
-#     def __init__(self, board, players):
-#         self.players = players
-#         self.board = board
-
