@@ -118,7 +118,6 @@ class RandomPlayer(Player):
         move_list = self.get_legal_moves(board, biggest_first)
 
         if move_list.__len__() == 0:
-            print "No move chosen"
             return None
 
         else:

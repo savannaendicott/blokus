@@ -55,7 +55,7 @@ class GameEngine(object):
         self.turn_num += 1
         passed = 0
 
-        print "turn %d" % self.turn_num
+        #print "turn %d" % self.turn_num
         for p in self.players:
             if p.passed():
                 passed += 1
@@ -68,7 +68,6 @@ class GameEngine(object):
                 startTime = int(round(time.time() * 1000))
                 #print p.get_color()+"'s turn "
                 move = p.get_move(self.board, self.players)
-                print "move:"+ str(move) +" from " + p.get_type()
                 if not move is None : p.play_piece(move.get_piece())
                 #print "Done in %d ms" % (int(round(time.time() * 1000)) - startTime)
                 if move is None:
@@ -103,7 +102,7 @@ class GameEngine(object):
     def _get_results(self):
         str = ""
         for p in self.players:
-            str+= p.get_color() + "(" + p.get_type() + "): %d pts" % p.get_score()+" with remaining pieces:\n"
+            str+= "\n"+p.get_color() + "(" + p.get_type() + "): %d pts" % p.get_score()+" with remaining pieces:\n"
             str += "   " +p.get_pieces_str()+"\n"
         return str
 
@@ -184,7 +183,7 @@ class GameEngine(object):
 def test_bots():
     file_name = "logs/log-"+time.strftime("%d%m%Y")+".txt"
     file_object = open(file_name, "a")
-    num_games = 2
+    num_games = 50
     player_types = ["AB_0", "AB_1", "AB_2", "AB_3", "R"]
     win_count = [0] * 5
     played_games = [0] * 5
@@ -195,13 +194,14 @@ def test_bots():
 
     results = []
     for i in range(num_games):
+        print
         players = []
         player_str = ""
         for j in range(4):
             players.append(player_types[randint(0, 4)])
             player_str += players[j]+" "
 
-        print players
+        print "Game %d with players: " + players % i
         for str in players:
             played_games[getIndex(str, player_types)] += 1
         file_object.write("New Game with players "+ player_str)
@@ -210,7 +210,7 @@ def test_bots():
         result, str = engine.play_game()
         win_count[getIndex(players[result], player_types)] +=1
 
-        file_object.write("Done in %d ms" % (int(round(time.time() * 1000)) - startTime))
+        file_object.write("\nDone in %d ms" % (int(round(time.time() * 1000)) - startTime))
         results.append(result)
         file_object.write(str+"\n\n")
 
@@ -218,7 +218,7 @@ def test_bots():
     for i in range(player_types.__len__()):
         if played_games[i] == 0: percent = 0
         else: percent = win_count[i] / played_games[i]
-        file_object.write("%d wins / %d games played = %.2f" % (win_count[i], played_games[i], percent))
+        file_object.write(player_types[i] + ": %2d wins / %2d games played = %.2f \n" % (win_count[i], played_games[i], percent))
 
     file_object.close()
 
