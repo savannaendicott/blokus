@@ -54,7 +54,7 @@ class CLIDisplay(Display):
         for r in range(board.board_h):
             str_line = "|"
             for c in range(board.board_w):
-                state_xy = board.get_state(c, r)
+                state_xy = board.get_state_at_point(c, r)
                 if state_xy == -1:
                     str_line += color_reset + "."
                 else:

@@ -1,14 +1,13 @@
 import sys
-import numpy as np
-
-
-from displays import CLIDisplay, NoDisplay
-from players import RandomPlayer, AlphaBetaAI
-from pieces import Piece
-from board import Move, Board
-from random import randint
 import time
 import copy
+from random import randint
+from logging_util import TrainingLog, LoggingUtil, GameWinnerLog
+from pieces import PieceList, Piece
+from displays import CLIDisplay, NoDisplay
+from players import RandomPlayer, AlphaBetaAI
+from board import Move, Board
+
 
 class GameEngine(object):
     """Game engine class stores the current game state and controls when to 
@@ -18,15 +17,20 @@ class GameEngine(object):
     board_w = 20
     board_h = 20
 
-    def __init__(self, display, players):
+    def __init__(self, id, display, players):
+        self.game_id = id
+
+        self.logging_util = TrainingLog()
+
         self.display = display
         self._moves = [[]for p in range(players.__len__())]
+        self._states = []
         if not 1 < players.__len__() < 5:
             print "Error: invalid number of players %d, must be between 1 and 4" % players.__len__()
             sys.exit(1)
 
         player_config = players
-        piece_list = self.get_piece_list("valid_pieces.txt")
+        piece_list = PieceList.get_piece_list("valid_pieces.txt")
 
         self.turn_num = 0
         self.board = Board(self.board_w, self.board_h, player_config.__len__)
@@ -66,26 +70,25 @@ class GameEngine(object):
 
             while True:
                 startTime = int(round(time.time() * 1000))
-                #print p.get_color()+"'s turn "
                 move = p.get_move(self.board, self.players)
                 if not move is None : p.play_piece(move.get_piece())
-                #print "Done in %d ms" % (int(round(time.time() * 1000)) - startTime)
+
                 if move is None:
-                   # print p.get_color() + " passed"
                     p.pass_turn()
                     break
 
-                #print "Move: "+ move.describe()
                 try:
+                    liberties_before = p.get_liberties(self.board)
                     self.board.add_move(p, move)
-                    #print move.raw()
-                    self._moves[p.get_id()].append(move.raw())
+                    move_id = LoggingUtil.get_next_move_id()
+                    self.logging_util.log_verbose(self.game_id, p.get_id(), self.board.get_state(), move, move_id)
+                    self.logging_util.export(self.game_id, p.get_id(), liberties_before, p.get_score(),
+                                             p.get_liberties(self.board), move, move_id)
                     break
                 except ValueError as e:
                     print "Error: move is illegal. Try again:"
-    def _print_results(self):
-        print self._get_winner().get_color() +" is the winner!"
-        print self._get_results()
+
+        self._states.append(self.board.get_state())
 
     def _get_winner(self):
         min = 1000
@@ -100,141 +103,72 @@ class GameEngine(object):
         return winner
 
     def _get_results(self):
-        str = ""
+        scores = []
         for p in self.players:
-            str+= "\n"+p.get_color() + "(" + p.get_type() + "): %d pts" % p.get_score()+" with remaining pieces:\n"
-            str += "   " +p.get_pieces_str()+"\n"
-        return str
+            scores.append(p.get_score())
+        return scores.__str__() +"\n"
 
-    def print_moves(self):
-        str = ""
-        for player in self.players:
-            str += "\n" + player.get_color()+"'s moves:\n----------------\n"
-            for move in self._moves[player.get_id()]:
-                str += move + "\n"
-        return str
+    # def print_moves(self):
+    #     str = ""
+    #     for player in self.players:
+    #         str += "\n" + player.get_color()+"'s moves:\n----------------\n"
+    #         for move in self._moves[player.get_id()]:
+    #             str += move + "\n"
+    #     return str
+
+
+
+    # def print_game(self):
+    #     str = ""
+    #     for state in self._states:
+    #         str += state.__str__() +"\n"
+    #     return str
 
     def play_game(self):
         while not self.board.game_over:
             self._play_turn()
 
-        str = self._get_results() + self.print_moves()
+        str = self._get_results() # + self.print_game()
 
         return self._get_winner() , str
 
-    def get_piece_list(self,fname):
-        """Read the game pieces from the file <fname>
+def get_index(arr, obj):
+    for i in range(arr.__len__()):
+        if str(arr[i]) == str(obj):
+            return i
+    return -1
 
-        << Edit by Savanna Endicott >>
-        File format must be:
-        - Line 1: N (number of pieces)
-        - For k in [0, N):
-          - Line 1: piece id
-          - Line 2: L (number of lines in piece)
-          - Lines 3 - L+1: layout of piece (# means tile, O means center)
-
-        File format must be:
-        - Line 1: N (number of pieces)
-        - For k in [0, N):
-          - Line 1: L (number of lines in piece)
-          - Lines 2 - L+1: layout of piece (# means tile, O means center)
-
-        Sample file:
-        2
-        2
-        O#
-        ##
-        1
-        ##O##
-        """
-        pieces = []
-        with open(fname) as f:
-            lines = f.read().splitlines()
-
-        N = int(lines[0])
-        L = 1
-        for i in range(N):
-            x_origin = 0
-            y_origin = 0
-
-            x_list = []
-            y_list = []
-
-
-            pieceId = lines[L]
-            num_lines = int(lines[L+1])
-            for j in range(num_lines):
-                line = lines[L + 2 + j]
-                for k in range(len(line)):
-                    if line[k] in ('O', 'o', '0'):
-                        x_origin = k
-                        y_origin = j
-                    if line[k] is not ' ':
-                        x_list.append(k)
-                        y_list.append(j)
-
-            x_list = [x - x_origin for x in x_list]
-            y_list = [y - y_origin for y in y_list]
-            pieces.append(Piece(x_list, y_list, pieceId))
-
-            L += 2 + num_lines
-        return pieces
-
-def test_bots():
-    file_name = "logs/log-"+time.strftime("%d%m%Y")+".txt"
-    file_object = open(file_name, "a")
-    num_games = 50
+def test_bots(num_games):
     player_types = ["AB_0", "AB_1", "AB_2", "AB_3", "R"]
-    win_count = [0] * 5
-    played_games = [0] * 5
-
     disp = NoDisplay()
-
-    file_object.write(time.strftime("%c")+"\n")
-
     results = []
+    logger = GameWinnerLog()
+
     for i in range(num_games):
-        print
+        game_id = LoggingUtil.get_next_game_id()
         players = []
         player_str = ""
         for j in range(4):
             players.append(player_types[randint(0, 4)])
-            player_str += players[j]+" "
+            player_str += players[j] + " "
 
-        print "Game %d with players: " + players % i
-        for str in players:
-            played_games[getIndex(str, player_types)] += 1
-        file_object.write("New Game with players "+ player_str)
-        engine = GameEngine(disp, players)
-        startTime = int(round(time.time() * 1000))
+        print ("Game %d with players: " + player_str) % (i + 1)
+        engine = GameEngine(game_id, disp, players)
         result, str = engine.play_game()
-        win_count[getIndex(players[result], player_types)] +=1
-
-        file_object.write("\nDone in %d ms" % (int(round(time.time() * 1000)) - startTime))
+        logger.log(game_id,result)
         results.append(result)
-        file_object.write(str+"\n\n")
 
-    file_object.write("\n\n-----------------\nOVERALL:")
-    for i in range(player_types.__len__()):
-        if played_games[i] == 0: percent = 0
-        else: percent = win_count[i] / played_games[i]
-        file_object.write(player_types[i] + ": %2d wins / %2d games played = %.2f \n" % (win_count[i], played_games[i], percent))
-
-    file_object.close()
-
-def getIndex(str, array):
-    for i in range(array.__len__()):
-        if array[i] == str:
-            return i
+    LoggingUtil.csv_util()
 
 def main():
     disp = CLIDisplay()
     players = ["AB_0", "AB_1", "AB_2", "AB_3"]
-    engine = GameEngine(disp, players)
+    engine = GameEngine(LoggingUtil.get_next_game_id(), disp, players)
     engine.play_game()
 
+
 if __name__ == "__main__":
-    test_bots()
+    test_bots(30)
+
     #main()
 
-    

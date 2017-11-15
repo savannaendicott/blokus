@@ -42,6 +42,16 @@ class Player(object):
     def get_biggest_piece_size(self):
         return self._pieces[0].get_num_tiles()
 
+    def get_liberties(self, board):
+        num_liberties = 0
+        for x in range(0, 20):
+            for y in range(0, 20):
+                if not board.check_tile_legal(self.id, x, y):
+                    continue
+                if board.check_tile_attached(self.id, x, y):
+                    num_liberties += 1
+        return num_liberties
+
     def get_legal_moves(self, board, biggestFirst = False):
 
         # Get a list of unique (x, y) points that might be legal

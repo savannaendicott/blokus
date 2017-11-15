@@ -99,32 +99,17 @@ class PieceList(object):
     distinct 5-polyominos).
     """
 
-    def __init__(self, fname):
+    @staticmethod
+    def get_piece_list(fname):
         """Read the game pieces from the file <fname>
-
-        << Edit by Savanna Endicott >>
         File format must be:
         - Line 1: N (number of pieces)
         - For k in [0, N):
           - Line 1: piece id
           - Line 2: L (number of lines in piece)
           - Lines 3 - L+1: layout of piece (# means tile, O means center)
-
-        File format must be:
-        - Line 1: N (number of pieces)
-        - For k in [0, N):
-          - Line 1: L (number of lines in piece)
-          - Lines 2 - L+1: layout of piece (# means tile, O means center)
-
-        Sample file:
-        2
-        2
-        O#
-        ##
-        1
-        ##O##
         """
-        self.pieces = []
+        pieces = []
         with open(fname) as f:
             lines = f.read().splitlines()
 
@@ -152,9 +137,10 @@ class PieceList(object):
 
             x_list = [x - x_origin for x in x_list]
             y_list = [y - y_origin for y in y_list]
-            self.pieces.append(Piece(x_list, y_list, pieceId))
+            pieces.append(Piece(x_list, y_list, pieceId))
 
             L += 2 + num_lines
+        return pieces
 
     def get_num_pieces(self):
         """Return the number of distinct pieces in the list.
@@ -174,32 +160,3 @@ class PieceList(object):
 
     def get_pieces(self):
         return self.pieces
-
-"""global_piece_list: A shared PieceList object. Use the following functions to 
-access it from other modules.
-"""
-global_piece_list = None
-
-def initPieceList(fname):
-    """Create a global list of pieces by reading from <fname>.
-
-    Stores a single list so that other modules don't need to re-run the 
-    piece list initialization. 
-    
-    Call this once during startup.
-    """
-    global global_piece_list
-
-    global_piece_list = PieceList(fname)
-
-def get_pieceList():
-    """Return the shared global piece list.
-    """
-    return global_piece_list
-
-if __name__ == "__main__":
-    # Test piece list loading
-    pl = PieceList("valid_pieces2.txt")
-    print pl.get_num_pieces()
-    for i in range(pl.get_num_pieces()):
-        print pl.get_piece(i).get_num_tiles()

@@ -137,14 +137,17 @@ class Board(object):
         if x < self.board_w -1 and self._state[y][x+1] == player: return False
         return True
 
-    def get_state(self, x, y):
+    def get_state_at_point(self, x, y):
         return self._state[y][x]
+
+    def get_state(self):
+        return self._state
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
         for w in range(self.board_w):
             for h in range(self.board_h):
-                if not other.get_state(w,h) == self.getState(w,h):
+                if not other.get_state_at_point(w,h) == self.getState(w,h):
                     return False
         return True
 
