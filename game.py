@@ -2,7 +2,7 @@ import sys
 import time
 import copy
 from random import randint
-from logging_util import TrainingLog, LoggingUtil, GameWinnerLog
+from logging_util import TrainingLog, LoggingUtil
 from pieces import PieceList, Piece
 from displays import CLIDisplay, NoDisplay
 from players import RandomPlayer, AlphaBetaAI
@@ -80,10 +80,21 @@ class GameEngine(object):
                 try:
                     liberties_before = p.get_liberties(self.board)
                     self.board.add_move(p, move)
-                    move_id = LoggingUtil.get_next_move_id()
-                    self.logging_util.log_verbose(self.game_id, p.get_id(), self.board.get_state(), move, move_id)
-                    self.logging_util.export(self.game_id, p.get_id(), liberties_before, p.get_score(),
-                                             p.get_liberties(self.board), move, move_id)
+                    move_tiles = move.get_tiles()
+                    #print move_tiles.__str__()
+                    properties = []
+                    properties.append(p.get_id())
+                    properties.append(liberties_before)
+                    properties.append(move.get_piece().get_id())
+                    properties.append(move.get_piece().get_num_tiles())
+                    properties.append(p.get_score())
+                    properties.append(p.get_liberties(self.board))
+                    properties.append(1 if (p.get_id() == 0) else 0)
+
+                    for coords in move_tiles:
+                        move_id = LoggingUtil.get_next_move_id()
+                        self.logging_util.training_input(coords, move_id, properties)
+
                     break
                 except ValueError as e:
                     print "Error: move is illegal. Try again:"
@@ -128,9 +139,11 @@ class GameEngine(object):
         while not self.board.game_over:
             self._play_turn()
 
+        winner = self._get_winner()
+        self.logging_util.end_game_log(winner, self.game_id)
         str = self._get_results() # + self.print_game()
 
-        return self._get_winner() , str
+        return winner , str
 
 def get_index(arr, obj):
     for i in range(arr.__len__()):
@@ -142,7 +155,6 @@ def test_bots(num_games):
     player_types = ["AB_0", "AB_1", "AB_2", "AB_3", "R"]
     disp = NoDisplay()
     results = []
-    logger = GameWinnerLog()
 
     for i in range(num_games):
         game_id = LoggingUtil.get_next_game_id()
@@ -155,10 +167,7 @@ def test_bots(num_games):
         print ("Game %d with players: " + player_str) % (i + 1)
         engine = GameEngine(game_id, disp, players)
         result, str = engine.play_game()
-        logger.log(game_id,result)
         results.append(result)
-
-    LoggingUtil.csv_util()
 
 def main():
     disp = CLIDisplay()
@@ -168,7 +177,5 @@ def main():
 
 
 if __name__ == "__main__":
-    test_bots(30)
-
-    #main()
+    test_bots(20)
 

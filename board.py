@@ -28,6 +28,16 @@ class Move(object):
     def raw(self):
          return self.piece.get_id() +", %d, %d, %d, %d" %(self.x,self.y,self.rot, self.flip)
 
+    def get_tiles(self):
+        coords = []
+        for t in range(self.piece.get_num_tiles()):
+            temp = []
+            (x, y) = self.piece.get_tile(t, self.x, self.y, self.rot, self.flip)
+            temp.append(x)
+            temp.append(y)
+            coords.append(temp)
+        return coords
+
 
 class Board(object):
     """A Board describes the current state of the game board. It's separate from

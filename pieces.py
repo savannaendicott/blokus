@@ -141,22 +141,3 @@ class PieceList(object):
 
             L += 2 + num_lines
         return pieces
-
-    def get_num_pieces(self):
-        """Return the number of distinct pieces in the list.
-        """
-        return len(self.pieces)
-
-    def get_piece(self, n):
-        """Return piece <n> from this list.
-        """
-        if n < 0:
-            raise ValueError("Can't retrieve piece %d" % n)
-
-        return self.pieces[n]
-
-    def remove(self, p):
-        self.pieces.remove(p)
-
-    def get_pieces(self):
-        return self.pieces
