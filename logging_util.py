@@ -12,6 +12,8 @@ class TrainingLog(object):
         fh.setLevel(logging.DEBUG)
         frmt = logging.Formatter('%(asctime)s : %(message)s')
         fh.setFormatter(frmt)
+        if self.training.handlers:
+            self.training.handlers = []
         self.training.addHandler(fh)
 
         self.game_buffer = [[[] for c in range(20)] for r in range(20)]

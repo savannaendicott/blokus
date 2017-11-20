@@ -2,6 +2,7 @@
 from board import Move, Board
 import copy
 import sys
+import random
 from pieces import PieceList
 
 colors = ["RED", "YELLOW", "GREEN", "BLUE"]
@@ -124,7 +125,6 @@ class RandomPlayer(Player):
     number, x/y, and rotation/flip)
     """
     def get_move(self, board, players, biggest_first=False):
-        import random
         move_list = self.get_legal_moves(board, biggest_first)
 
         if move_list.__len__() == 0:
@@ -155,6 +155,7 @@ class AlphaBetaAI(Player):
             sys.exit(1)
 
         self.strategy = strategy
+        self.turn = 0
         self.maxDepth = maxDepth
         self.visited = []
         self.players = None
@@ -163,6 +164,9 @@ class AlphaBetaAI(Player):
         self.players = players
 
     def get_move(self, board, players):
+        self.turn +=1
+        if self.turn < 3 :
+            return self.play_random_big_piece(board)
         if self.players == None : self.set_players(players)
         value, move = self.alpha_beta(State(board, self, None),0, -100000, 100000, self)
         return move
@@ -234,6 +238,15 @@ class AlphaBetaAI(Player):
                 total += average_remaining[self.get_id()] - average_remaining[i]
 
         return total
+
+    def play_random_big_piece(self,board):
+        moves = self.get_legal_moves(board, True)
+        if moves.__len__() == 0:
+            return None
+
+        else:
+            n = random.randint(0, len(moves) - 1)
+            return moves[n]
 
     def bigger_first(self, move):
         return move.piece.get_num_tiles()

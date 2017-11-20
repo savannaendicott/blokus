@@ -119,22 +119,6 @@ class GameEngine(object):
             scores.append(p.get_score())
         return scores.__str__() +"\n"
 
-    # def print_moves(self):
-    #     str = ""
-    #     for player in self.players:
-    #         str += "\n" + player.get_color()+"'s moves:\n----------------\n"
-    #         for move in self._moves[player.get_id()]:
-    #             str += move + "\n"
-    #     return str
-
-
-
-    # def print_game(self):
-    #     str = ""
-    #     for state in self._states:
-    #         str += state.__str__() +"\n"
-    #     return str
-
     def play_game(self):
         while not self.board.game_over:
             self._play_turn()
@@ -177,5 +161,6 @@ def main():
 
 
 if __name__ == "__main__":
-    test_bots(20)
+    #LoggingUtil.remove_duplicate_lines("training.txt", "logs/training.txt")
+    test_bots(100)
 
