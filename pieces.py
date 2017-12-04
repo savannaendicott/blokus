@@ -1,5 +1,8 @@
 """Classes and utilities to describe all of the game pieces.
 """
+import fileinput
+
+piece_names = ['singleSquare', 'twoPiece', 'line3', '3corner', 'l4', 'cube', 'L4', 'z4', 't4', 'line5', '-L', 'L5tall', 'z5', 'chunky5', 'T5', 'C5', 'L5', 'M5', 'X5', 'tree5', 'Z5']
 
 def negateList(lst):
     """Helper function: negate every item in a list
@@ -65,6 +68,9 @@ class Piece(object):
 
         #print self.x
 
+    def get_indeces(self):
+        return self.x[0], self.y[0]
+
     def get_num_tiles(self):
         """Return the number of tiles in this block. Helpful for iterating 
         through each tile.
@@ -94,13 +100,13 @@ class Piece(object):
         # Add offsets
         return (x[tile] + x_offset, y[tile] + y_offset)
 
-class PieceList(object):
-    """The PieceList class stores a list of all of the Blokus game pieces (the
-    distinct 5-polyominos).
-    """
+    def get_states(self, rotation, flip):
+        index = rotation
+        if flip: index +=4
 
-    @staticmethod
-    def get_piece_list(fname):
+        return self.x[index], self.y[index]
+
+def get_piece_list(fname):
         """Read the game pieces from the file <fname>
         File format must be:
         - Line 1: N (number of pieces)
@@ -140,4 +146,23 @@ class PieceList(object):
             pieces.append(Piece(x_list, y_list, pieceId))
 
             L += 2 + num_lines
+
         return pieces
+
+
+def get_piece_index(name):
+    for i in range(len(piece_names)):
+        if piece_names[i] == name:
+            return i
+
+def temp_updater():
+    with open('logs/test.txt', 'r') as file:
+        filedata = file.read()
+
+    for i in range(len(piece_names)):
+        filedata = filedata.replace(piece_names[i], str(i))
+
+
+    # Write the file out again
+    with open('logs/ai-training.txt', 'a') as file:
+        file.write(filedata)

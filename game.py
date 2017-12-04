@@ -3,7 +3,7 @@ import time
 import copy
 from random import randint
 from logging_util import TrainingLog, LoggingUtil
-from pieces import PieceList, Piece
+from pieces import get_piece_list, get_piece_index
 from displays import CLIDisplay, NoDisplay
 from players import RandomPlayer, AlphaBetaAI
 from board import Move, Board
@@ -30,7 +30,7 @@ class GameEngine(object):
             sys.exit(1)
 
         player_config = players
-        piece_list = PieceList.get_piece_list("valid_pieces.txt")
+        piece_list = get_piece_list("valid_pieces.txt")
 
         self.turn_num = 0
         self.board = Board(self.board_w, self.board_h, player_config.__len__)
@@ -59,7 +59,6 @@ class GameEngine(object):
         self.turn_num += 1
         passed = 0
 
-        #print "turn %d" % self.turn_num
         for p in self.players:
             if p.passed():
                 passed += 1
@@ -69,7 +68,6 @@ class GameEngine(object):
             self.display.draw_board(self.board)
 
             while True:
-                startTime = int(round(time.time() * 1000))
                 move = p.get_move(self.board, self.players)
                 if not move is None : p.play_piece(move.get_piece())
 
@@ -80,20 +78,9 @@ class GameEngine(object):
                 try:
                     liberties_before = p.get_liberties(self.board)
                     self.board.add_move(p, move)
-                    move_tiles = move.get_tiles()
-                    #print move_tiles.__str__()
-                    properties = []
-                    properties.append(p.get_id())
-                    properties.append(liberties_before)
-                    properties.append(move.get_piece().get_id())
-                    properties.append(move.get_piece().get_num_tiles())
-                    properties.append(p.get_score())
-                    properties.append(p.get_liberties(self.board))
-                    properties.append(1 if (p.get_id() == 0) else 0)
 
-                    for coords in move_tiles:
-                        move_id = LoggingUtil.get_next_move_id()
-                        self.logging_util.training_input(coords, move_id, properties)
+                    stuff = [liberties_before, p.get_score(), p.get_liberties(self.board), p.get_id()]
+                    self.logging_util.training_input(move,stuff)
 
                     break
                 except ValueError as e:
@@ -125,7 +112,8 @@ class GameEngine(object):
 
         winner = self._get_winner()
         self.logging_util.end_game_log(winner, self.game_id)
-        str = self._get_results() # + self.print_game()
+
+        str = self._get_results()
 
         return winner , str
 
@@ -162,5 +150,6 @@ def main():
 
 if __name__ == "__main__":
     #LoggingUtil.remove_duplicate_lines("training.txt", "logs/training.txt")
-    test_bots(100)
+    test_bots(10)
+    #main()
 

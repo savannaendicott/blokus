@@ -5,6 +5,8 @@ from board import Board
 import colorama
 colorama.init(autoreset=True)
 
+DISPLAY_ERR_STRING = "Error: using base display class"
+
 class Display(object):
     """the Display class defines an interface for the game engine to draw the
     game state onto the screen.
@@ -13,12 +15,10 @@ class Display(object):
     command line, on a GUI, etc...
     """
 
-    display_error_string = "Error: using base display class"
-
     def draw_board(self, board):
         """Draw the board onto the screen, command line, etc
         """
-        raise NotImplementedError(display_error_string)
+        raise NotImplementedError(DISPLAY_ERR_STRING)
 
 class NoDisplay(Display):
     """The NoDisplay doesn't bother drawing the game. Useful for running many

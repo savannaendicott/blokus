@@ -3,9 +3,17 @@ from board import Move, Board
 import copy
 import sys
 import random
-from pieces import PieceList
+import MoveGen
 
 colors = ["RED", "YELLOW", "GREEN", "BLUE"]
+
+
+class State(object):
+    def __init__(self, board, player, move):
+        self.board = board
+        self.move = move
+        self.player = player
+
 
 class Player(object):
 
@@ -75,8 +83,10 @@ class Player(object):
                             xy_list.append((xi, yi))
         xy_list = sorted(set(xy_list))
 
+        #analyzed_coords = []
         # Generate all legal moves
         move_list = []
+        missing_moves = []
         for piece in self._pieces:
             if biggestFirst and piece.get_num_tiles() < max_size :
                 if move_list.__len__ == 0 : max_size -= 1
@@ -85,16 +95,19 @@ class Player(object):
                 for rot in range(0, 4):
                     for flip in [False, True]:
                         new_move = Move(piece, x, y, rot, flip)
+                        MoveGen.legal(new_move)
+                        f = 1 if flip else 0
                         if board.check_move_valid(self, new_move):
-                            move_list.append(new_move)
-                            # new_move.describe(board.piece_list.get_piece(piece).get_id())
-        return move_list
+                            if new_move not in move_list:
+                               # \ and MoveGen.find_move(new_move) is not None:
+                                move_list.append(new_move)
+                            # else:
+                            #     if new_move.get_indeces() not in missing_moves:
+                            #         missing_moves.append(new_move.get_indeces())
 
-    def print_pieces(self):
-        piecesLeftStr = ""
-        for piece in self._pieces:
-            piecesLeftStr += piece.get_id() + " "
-        print self._colour + "'s pieces: " + piecesLeftStr
+                            # new_move.describe(board.piece_list.get_piece(piece).get_id())
+        #print missing_moves
+        return move_list
 
     def get_pieces_str(self):
         piecesLeftStr = ""
@@ -136,12 +149,6 @@ class RandomPlayer(Player):
 
     def get_type(self):
         return "random player"
-
-class State(object):
-        def __init__(self, board, player, move):
-            self.board = board
-            self.move = move
-            self.player = player
 
 class AlphaBetaAI(Player):
     """ strategy is which function will be called as the heuristic, represented as an int
@@ -189,7 +196,6 @@ class AlphaBetaAI(Player):
     def alpha_beta(self, state, depth, alpha, beta, player):
         best = None
         children = self.expand(state, player)
-        #print "depth: %d, %d children nodes" % (depth, children.__len__())
 
         if children.__len__==0 or state.board.game_over or depth == self.maxDepth:
             if not state.move == None:
@@ -198,7 +204,6 @@ class AlphaBetaAI(Player):
         if player.get_id() == self.get_id():
             bestValue = alpha
             for child in children :
-                #print child.board.piece_list.get_piece(child.move.get_piece())
                 value = self.alpha_beta(child, depth + 1, bestValue, beta, self.next_player(player))
                 bestValue = max(bestValue, value)
                 best = child.move

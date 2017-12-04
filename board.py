@@ -1,4 +1,3 @@
-from pieces import PieceList
 import numpy
 
 class Move(object):
@@ -16,6 +15,7 @@ class Move(object):
         self.y = y
         self.rot = rot
         self.flip = flip
+        self.xlist, self.ylist = self._compute_indeces()
 
     def get_piece(self):
         return self.piece
@@ -24,6 +24,9 @@ class Move(object):
         flipStr = "flipped" if self.flip else ""
         return "Piece "+ self.piece.get_id() + " " + flipStr+" with center coordinate (%d, %d), " \
              "rotation %d\n" % (self.x, self.y, self.rot)
+
+    def get_indeces(self):
+        return [self.xlist, self.ylist]
 
     def raw(self):
          return self.piece.get_id() +", %d, %d, %d, %d" %(self.x,self.y,self.rot, self.flip)
@@ -38,6 +41,30 @@ class Move(object):
             coords.append(temp)
         return coords
 
+    def get_configurations(self):
+        flip = 1 if self.flip else 0
+        return self.x, self.y, self.piece.get_id(), self.rot, flip
+
+    def get_configurations_with_piece(self):
+        flip = 1 if self.flip else 0
+        return self.x, self.y, self.piece, self.rot, flip
+
+    def _compute_indeces(self):
+        idx = int(self.rot)
+        if self.flip:
+            idx += 4
+
+        x_list = []
+        y_list = []
+
+        for index in range(len(self.piece.x[idx])):
+            x =self.piece.x[idx][index]
+            y = self.piece.y[idx][index]
+            offset_x = x + int(self.x)
+            offset_y = y + int(self.y)
+            x_list.append(offset_x)
+            y_list.append(offset_y)
+        return x_list, y_list
 
 class Board(object):
     """A Board describes the current state of the game board. It's separate from
@@ -55,9 +82,10 @@ class Board(object):
       help understand the moves
     """
 
-    def __init__(self, board_w, board_h, num_p):
+    def __init__(self, board_w, board_h=0, num_p=4):
         self.board_w = board_w
-        self.board_h = board_h
+        self.board_h = self.board_w if board_h == 0 else board_h
+
         self.game_over = False
 
         self._state = [[-1 for c in range(board_w)] for r in range(board_h)]
@@ -153,6 +181,7 @@ class Board(object):
     def get_state(self):
         return self._state
 
+
     def __eq__(self, other):
         """Override the default Equals behavior"""
         for w in range(self.board_w):
@@ -168,3 +197,4 @@ class Board(object):
                 str+= "%d," % self._state[j][i]
 
             print str + "%d]" % self._state[self.board_w -1][i]
+

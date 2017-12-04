@@ -1,21 +1,3 @@
-# import logging
-#
-# # create logger
-# logger = logging.getLogger('training')
-# logger.setLevel(logging.DEBUG) # log all escalated at and above DEBUG
-# # add a file handler
-# fh = logging.FileHandler('training.csv')
-# fh.setLevel(logging.DEBUG) # ensure all messages are logged to file
-#
-# # create a formatter and set the formatter for the handler.
-# frmt = logging.Formatter('%(asctime)s,%(message)s')
-# fh.setFormatter(frmt)
-#
-# # add the Handler to the logger
-# logger.addHandler(fh)
-#
-# # You can now start issuing logging statements in your code
-# logger.debug('RED,ones,7,32,35,BLUE')
 
 import pandas as pd              # A beautiful library to help us work with data as tables
 import numpy as np               # So we can use number matrices. Both pandas and TensorFlow need it.
@@ -23,12 +5,11 @@ import matplotlib.pyplot as plt  # Visualize the things
 import tensorflow as tf          # Fire from the gods
 
 #id; state; player; ones; lib_b4; score; lib_after; zeroes; win_or_lose;
-
-
-UNUSED_COLUMNS = ["timestamp","state","id"] # use column name
+# win, player, lib_b4, score, lib_after, player_is_nn, piece_id, piece_x, piece_y, rotation, flip, move_id
+UNUSED_COLUMNS = ["piece_id","piece_x","piece_y","rotation","flip","move_id"] # use column name
 NUM_SAMPLES = 10
 CSV_FILENAME = "logs/training-complete.csv"
-COLUMN_NAMES = ["ones","lib_b4","score","lib_after","zeroes", "y2"]
+COLUMN_NAMES = ["y","player","lib_b4","score","lib_after","player_is_nn"]
 
 dataframe = pd.read_csv(CSV_FILENAME) # Let's have Pandas load our dataset as a dataframe
 dataframe = dataframe.drop(UNUSED_COLUMNS, axis=1) # Remove columns we don't care about
@@ -36,14 +17,14 @@ dataframe = dataframe[0:NUM_SAMPLES] # We'll only use the first 10 rows of the d
 
 dataframe.loc[:, ("y2")] = dataframe["y"] == 0           # y2 is the negation of y1
 dataframe.loc[:, ("y2")] = dataframe["y2"].astype(int)    # Turn TRUE/FALSE values into 1/0
-# y2 means we don't like a house
 
 inputX = dataframe.loc[:, COLUMN_NAMES].as_matrix()
 inputY = dataframe.loc[:, ["y", "y2"]].as_matrix()
 
-learning_rate = 0.000001
-training_epochs = 2000
-display_step = 50
+K = 152                       # depth of convolutional layers
+LEARNING_RATE = .003          # initial learning rate
+DECAY = 8.664339379294006e-08 # rate of exponential learning_rate decay
+
 n_samples = inputY.size
 
 x = tf.placeholder(tf.float32, [None, 2])  # Okay TensorFlow, we'll feed you an array of examples. Each example will
@@ -71,7 +52,7 @@ cost = tf.reduce_sum(tf.pow(y_ - y, 2))/(2*n_samples)
 # Gradient descent
 optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
 
-init = tf.initialize_all_variables()
+init = tf.global_variables_initializer()
 sess = tf.Session()
 sess.run(init)
 
@@ -91,3 +72,8 @@ print "Training cost=", training_cost, "W=", sess.run(W), "b=", sess.run(b), '\n
 
 
 print sess.run(y, feed_dict={x: inputX })
+
+def softmax(E, temp):
+    #print "E =\n", E
+    expE = np.exp(temp * (E - max(E))) # subtract max to avoid overflow
+    return expE / np.sum(expE)
