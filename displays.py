@@ -32,7 +32,7 @@ class CLIDisplay(Display):
     """The CLIDisplay class prints the game board to the command line
     """
     def draw_board(self, board):
-        str_horiz = "+" + "-"*board.board_w + "+"
+        str_horiz = "+" + "-"*board.N + "+"
 
         color_fore = [
             colorama.Fore.RED,
@@ -51,9 +51,9 @@ class CLIDisplay(Display):
         color_reset = colorama.Style.RESET_ALL
 
         print str_horiz
-        for r in range(board.board_h):
+        for r in range(board.N):
             str_line = "|"
-            for c in range(board.board_w):
+            for c in range(board.N):
                 state_xy = board.get_state_at_point(c, r)
                 if state_xy == -1:
                     str_line += color_reset + "."

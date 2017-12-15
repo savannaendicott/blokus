@@ -252,9 +252,9 @@ if __name__ == "__main__":
     # model = EvalModels.Zero(N, Nfeat)
     # model = EvalModels.Linear(N, Nfeat)
     # train_data_dir = "/home/greg/coding/ML/go/NN/data/KGS/eval_examples/stones_4lib_4hist_ko_4cap_Nf21/train"
-    train_data_dir = "/home/greg/coding/ML/go/NN/data/KGS/eval_examples/stones_4lib_4hist_ko_4cap_komi_Nf22/train"
+    train_data_dir = "/Users/Savanna/Documents/School/Fall\ 2017/COMP4905/blokus-AI/logs/train-tf"
     # val_data_dir = "/home/greg/coding/ML/go/NN/data/KGS/eval_examples/stones_4lib_4hist_ko_4cap_Nf21/val-small"
-    val_data_dir = "/home/greg/coding/ML/go/NN/data/KGS/eval_examples/stones_4lib_4hist_ko_4cap_komi_Nf22/val-small"
+    val_data_dir = "/Users/Savanna/Documents/School/Fall\ 2017/COMP4905/blokus-AI/logs/val-tf"
     # normalization = Normalization.apply_featurewise_normalization_C
     normalization = Normalization.apply_featurewise_normalization_D
     build_feed_dict = EvalTraining.build_feed_dict

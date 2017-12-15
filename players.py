@@ -1,9 +1,7 @@
-
-from board import Move, Board
 import copy
 import sys
 import random
-import MoveGen
+from board import Move
 
 colors = ["RED", "YELLOW", "GREEN", "BLUE"]
 
@@ -13,7 +11,6 @@ class State(object):
         self.board = board
         self.move = move
         self.player = player
-
 
 class Player(object):
 
@@ -69,15 +66,15 @@ class Player(object):
 
         max_size = 5
         xy_list = []
-        for x in range(0, 20):
-            for y in range(0, 20):
+        for x in range(0, board.N):
+            for y in range(0, board.N):
                 if not board.check_tile_legal(self.id, x, y):
                     continue
                 if board.check_tile_attached(self.id, x, y):
                     min_x = max(0, x- 2)
-                    max_x = min(20, x + 3)
+                    max_x = min(board.N, x + 3)
                     min_y = max(0, y - 2)
-                    max_y = min(20, y + 3)
+                    max_y = min(board.N, y + 3)
                     for xi in range(min_x, max_x):
                         for yi in range(min_y, max_y):
                             xy_list.append((xi, yi))
@@ -86,27 +83,18 @@ class Player(object):
         #analyzed_coords = []
         # Generate all legal moves
         move_list = []
-        missing_moves = []
         for piece in self._pieces:
             if biggestFirst and piece.get_num_tiles() < max_size :
-                if move_list.__len__ == 0 : max_size -= 1
+                if move_list.__len__ == 0: max_size -= 1
                 else: break
             for (x, y) in xy_list:
                 for rot in range(0, 4):
                     for flip in [False, True]:
                         new_move = Move(piece, x, y, rot, flip)
-                        MoveGen.legal(new_move)
-                        f = 1 if flip else 0
                         if board.check_move_valid(self, new_move):
                             if new_move not in move_list:
-                               # \ and MoveGen.find_move(new_move) is not None:
                                 move_list.append(new_move)
-                            # else:
-                            #     if new_move.get_indeces() not in missing_moves:
-                            #         missing_moves.append(new_move.get_indeces())
 
-                            # new_move.describe(board.piece_list.get_piece(piece).get_id())
-        #print missing_moves
         return move_list
 
     def get_pieces_str(self):

@@ -1,92 +1,61 @@
 import sys
-import time
 import copy
 from random import randint
-from logging_util import TrainingLog, LoggingUtil
-from pieces import get_piece_list, get_piece_index
+from logging_util import fill_game_log, get_next_game_id, log_board_size
+from pieces import get_piece_list
 from displays import CLIDisplay, NoDisplay
 from players import RandomPlayer, AlphaBetaAI
-from board import Move, Board
+from board import Board
 
+PLAYER_TYPES = ["AB_0", "AB_1", "AB_2", "AB_3", "R"]
+COLOURS = ["RED", "YELLOW", "GREEN", "BLUE"]
 
 class GameEngine(object):
-    """Game engine class stores the current game state and controls when to 
+    """Game engine class stores the current game state, logs the game, and controls when to
     get input/draw output
     """
 
-    board_w = 20
-    board_h = 20
-
-    def __init__(self, id, display, players):
-        self.game_id = id
-
-        self.logging_util = TrainingLog()
+    def __init__(self, dimension, display, players, piece_src_file = "valid_pieces.txt"):
+        assert 1 < len(players) <5, "Invalid number of players %d, must be between 1 and 4" % len(players)
 
         self.display = display
-        self._moves = [[]for p in range(players.__len__())]
-        self._states = []
-        if not 1 < players.__len__() < 5:
-            print "Error: invalid number of players %d, must be between 1 and 4" % players.__len__()
-            sys.exit(1)
-
-        player_config = players
-        piece_list = get_piece_list("valid_pieces.txt")
-
         self.turn_num = 0
-        self.board = Board(self.board_w, self.board_h, player_config.__len__)
+        self.game_id = get_next_game_id()
 
-        self.players = []
-        for i in range(0, player_config.__len__()):
-            if (player_config[i] == "R"):
-                self.players.append(RandomPlayer(copy.deepcopy(piece_list), i))
-            elif (player_config[i] == "AB_0"):
-                self.players.append(AlphaBetaAI(copy.deepcopy(piece_list), i, 0))
-            elif (player_config[i] == "AB_1"):
-                self.players.append(AlphaBetaAI(copy.deepcopy(piece_list), i, 1))
-            elif (player_config[i] == "AB_2"):
-                self.players.append(AlphaBetaAI(copy.deepcopy(piece_list), i, 2))
-            elif (player_config[i] == "AB_3"):
-                self.players.append(AlphaBetaAI(copy.deepcopy(piece_list), i, 3))
-            else:
-                print "Error: invalid input type "+ player_config
-                sys.exit(1)
+        if dimension != 20:
+            log_board_size(self.game_id, dimension)
+
+        self.players = self.configure_players(players, piece_src_file)
+        self.board = Board(dimension,len(self.players))
 
     def _play_turn(self):
-        """Play a single round of turns.
-        Check for empty moves from the inputs (signalling passes) and ask for 
-        new moves if illegal moves are provided.
-        """
+        """Play a single round of turns"""
         self.turn_num += 1
         passed = 0
 
         for p in self.players:
             if p.passed():
                 passed += 1
-                if passed == self.players.__len__() : self.board.game_over = True
-                else : continue
+                if passed == len(self.players): self.board.game_over = True
+                else: continue
 
             self.display.draw_board(self.board)
 
             while True:
                 move = p.get_move(self.board, self.players)
-                if not move is None : p.play_piece(move.get_piece())
+                if not move is None :
+                    p.play_piece(move.get_piece())
 
                 if move is None:
                     p.pass_turn()
                     break
 
                 try:
-                    liberties_before = p.get_liberties(self.board)
                     self.board.add_move(p, move)
-
-                    stuff = [liberties_before, p.get_score(), p.get_liberties(self.board), p.get_id()]
-                    self.logging_util.training_input(move,stuff)
-
+                    fill_game_log(move, p, self.game_id)
                     break
                 except ValueError as e:
                     print "Error: move is illegal. Try again:"
-
-        self._states.append(self.board.get_state())
 
     def _get_winner(self):
         min = 1000
@@ -101,55 +70,98 @@ class GameEngine(object):
         return winner
 
     def _get_results(self):
-        scores = []
-        for p in self.players:
-            scores.append(p.get_score())
-        return scores.__str__() +"\n"
+        str = ""
+        for p in range(len(self.players)):
+            str += "  "+ COLOURS[p]+":"+ self.players[p].get_score().__str__() + "\n"
+        return str
 
     def play_game(self):
         while not self.board.game_over:
             self._play_turn()
 
         winner = self._get_winner()
-        self.logging_util.end_game_log(winner, self.game_id)
-
+        #self.logging_util.end_game_log(winner)
         str = self._get_results()
 
         return winner , str
 
-def get_index(arr, obj):
-    for i in range(arr.__len__()):
-        if str(arr[i]) == str(obj):
-            return i
-    return -1
+    def configure_players(self, configs, src_file):
+        plist = get_piece_list(src_file)
+        players = []
+        for i in range(len(configs)):
+            if configs[i] == "R":
+                players.append(RandomPlayer(copy.deepcopy(plist), i))
+            elif configs[i] == "AB_0":
+                players.append(AlphaBetaAI(copy.deepcopy(plist), i, 0))
+            elif configs[i] == "AB_1":
+                players.append(AlphaBetaAI(copy.deepcopy(plist), i, 1))
+            elif configs[i] == "AB_2":
+                players.append(AlphaBetaAI(copy.deepcopy(plist), i, 2))
+            elif configs[i] == "AB_3":
+                players.append(AlphaBetaAI(copy.deepcopy(plist), i, 3))
+            else:
+                print "Error: invalid input type "+ configs[i]
+                sys.exit(1)
+        return players
 
-def test_bots(num_games):
-    player_types = ["AB_0", "AB_1", "AB_2", "AB_3", "R"]
+"""
+    num_games:      number of games to play 
+    player_types:   include all player types that could be used in this game (see options in PLAYER_TYPES above)
+    N :             board dimensions (NxN)
+   """
+def test_bots(num_games = 1000, player_types=["R"], N = 20):
     disp = NoDisplay()
     results = []
 
     for i in range(num_games):
-        game_id = LoggingUtil.get_next_game_id()
         players = []
         player_str = ""
         for j in range(4):
-            players.append(player_types[randint(0, 4)])
+            players.append(player_types[randint(0, len(player_types)-1)])
             player_str += players[j] + " "
 
         print ("Game %d with players: " + player_str) % (i + 1)
-        engine = GameEngine(game_id, disp, players)
+        engine = GameEngine(N, disp, players, "valid_pieces.txt")
         result, str = engine.play_game()
         results.append(result)
 
-def main():
-    disp = CLIDisplay()
-    players = ["AB_0", "AB_1", "AB_2", "AB_3"]
-    engine = GameEngine(LoggingUtil.get_next_game_id(), disp, players)
-    engine.play_game()
 
+"""
+    player_types:   include all player types that could be used in this game (see options in PLAYER_TYPES above)
+    N :             board dimensions (NxN)
+"""
+def main(player_types=["R"], N = 20):
+    disp = CLIDisplay()
+    players = []
+    player_str = ""
+    print len(player_types)
+    for j in range(4):
+        players.append(player_types[randint(0, len(player_types) - 1)])
+        player_str += players[j] + " "
+    print ("Players: " + player_str)
+    engine = GameEngine(N, disp, players)
+    winner, str = engine.play_game()
+    print COLOURS[winner] + " won!"
+    print "Scores: "
+    print str
 
 if __name__ == "__main__":
-    #LoggingUtil.remove_duplicate_lines("training.txt", "logs/training.txt")
-    test_bots(10)
+
+
+
+    # run the following to play game with all random players
+    # and display the boards
     #main()
+
+    # run the following to play game with a variety of AI and random players
+    # and display the boards
+    #main(PLAYER_TYPES)
+
+    # run the following to play 1000 games with random players
+    test_bots(1, ["R"], 9)
+
+    # run the following to play 1 game with a variety of AI and random players
+    #test_bots(1, PLAYER_TYPES)
+
+
 

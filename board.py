@@ -1,4 +1,4 @@
-import numpy
+from pieces import get_piece_index, Piece, get_piece_by_index
 
 class Move(object):
     """A Move describes how one of the players is going to spend their move.
@@ -10,7 +10,11 @@ class Move(object):
     - Flip: whether the piece should be flipped (True/False)
     """
     def __init__(self, piece, x=0, y=0, rot=0, flip=False):
-        self.piece = piece
+        if isinstance(piece,Piece):
+            self.piece = piece
+        else: self.piece = get_piece_by_index(piece)
+
+
         self.x = x
         self.y = y
         self.rot = rot
@@ -28,6 +32,10 @@ class Move(object):
     def get_indeces(self):
         return [self.xlist, self.ylist]
 
+    def get(self):
+        f = 1 if self.flip else 0
+        return [get_piece_index(self.piece.get_id()), self.x, self.y, self.rot, f]
+
     def raw(self):
          return self.piece.get_id() +", %d, %d, %d, %d" %(self.x,self.y,self.rot, self.flip)
 
@@ -43,7 +51,7 @@ class Move(object):
 
     def get_configurations(self):
         flip = 1 if self.flip else 0
-        return self.x, self.y, self.piece.get_id(), self.rot, flip
+        return self.piece.get_id(), self.x, self.y, self.rot, flip
 
     def get_configurations_with_piece(self):
         flip = 1 if self.flip else 0
@@ -82,31 +90,52 @@ class Board(object):
       help understand the moves
     """
 
-    def __init__(self, board_w, board_h=0, num_p=4):
-        self.board_w = board_w
-        self.board_h = self.board_w if board_h == 0 else board_h
+    def __init__(self, dimension = 20, num_p=4):
 
         self.game_over = False
+        self.N = dimension
 
-        self._state = [[-1 for c in range(board_w)] for r in range(board_h)]
+        self._state = [[-1 for c in range(dimension)] for r in range(dimension)]
 
         self._connected = [
             [
-                [False for c in range(board_w)
-            ] for r in range(board_h)]
+                [False for c in range(dimension)
+            ] for r in range(dimension)]
         for p in range(4)]
 
         # Set up initial corners for each player now
-        self._connected[0][0             ][self.board_w-1] = True
+        self._connected[0][0             ][self.N-1] = True
         self._connected[1][0             ][             0] = True
-        self._connected[2][self.board_h-1][             0] = True
-        self._connected[3][self.board_h-1][self.board_h-1] = True
+        self._connected[2][self.N-1][             0] = True
+        self._connected[3][self.N-1][self.N-1] = True
+
+    def test_move(self, p , m):
+
+        #assert len(m) == 5
+        #assert len(move[0]) == len(move[1])
+        move = m.get_indeces()
+        print move
+        tiles = []
+        for i in range(len(move[0])):
+            tiles.append([move[0][i], move[1][i]])
+
+        for tile in tiles:
+            self._state[tile[0]][tile[1]] = p
+
+        #print "done"
+
+    def clear_board(self):
+        self._state = [[-1 for c in range(self.N)] for r in range(self.N)]
+
 
     def add_move(self, p, move):
-        if not self.check_move_valid(p, move):
+        if isinstance(p, int):
+            player = p
+        else: player = p.get_id()
+
+        if not self.check_move_valid(player, move):
             raise ValueError("Move is not allowed")
 
-        player = p.get_id()
         piece = move.get_piece()
 
         # Update internal state for each tile
@@ -117,44 +146,38 @@ class Board(object):
             # The diagonals are now attached
             if x > 0 and y > 0:
                 self._connected[player][y-1][x-1] = True
-            if x > 0 and y < self.board_h-1:
+            if x > 0 and y < self.N-1:
                 self._connected[player][y+1][x-1] = True
-            if x < self.board_w-1 and y < self.board_h-1:
+            if x < self.N-1 and y < self.N-1:
                 self._connected[player][y+1][x+1] = True
-            if x < self.board_w-1 and y > 0:
+            if x < self.N-1 and y > 0:
                 self._connected[player][y-1][x+1] = True
 
         return piece.get_num_tiles()
 
     def check_move_valid(self, player, move):
+        if isinstance(player, int):
+            player = player
+        else: player = player.get_id()
         attached_corner = False
 
         for t in range(move.get_piece().get_num_tiles()):
             (x,y) = move.get_piece().get_tile(t, move.x, move.y, move.rot, move.flip)
 
             # If any tile is illegal, this move isn't valid
-            if not self.check_tile_legal(player.get_id(), x, y):
+            if not self.check_tile_legal(player, x, y):
                 return False
 
-            if self._connected[player.get_id()][y][x]:
+            if self._connected[player][y][x]:
                 attached_corner = True
 
             # If at least one tile is attached, this move is valid
         return attached_corner
 
     def check_tile_attached(self, player, x, y):
-        """Check if (<x>, <y>) is diagonally attached to <player>'s moves.
-
-        Note that this does not check if this move is legal.
-
-        Returns True if attached or False if not.
-        """
-
-        # Make sure tile in bounds
-        if x < 0 or x >= self.board_w or y < 0 or y >= self.board_h:
+        if x < 0 or x >= self.N or y < 0 or y >= self.N:
             return False
 
-        # Otherwise, it's in the lookup table
         return self._connected[player][y][x]
 
 
@@ -163,16 +186,19 @@ class Board(object):
         """
 
         # Make sure tile in bounds
-        if x < 0 or x >= self.board_w or y < 0 or y >= self.board_h:
+        if x < 0 or x >= self.N or y < 0 or y >= self.N:
             return False
 
         if not self._state[y][x] == -1 :
             return False
 
+        return self.adjacent_to_self(player, x, y)
+
+    def adjacent_to_self(self, player, x, y):
         if y > 0 and self._state[y-1][x] == player: return False
-        if y < self.board_h -1 and self._state[y+1][x] == player: return False
+        if y < self.N -1 and self._state[y+1][x] == player: return False
         if x > 0 and self._state[y][x-1] == player: return False
-        if x < self.board_w -1 and self._state[y][x+1] == player: return False
+        if x < self.N -1 and self._state[y][x+1] == player: return False
         return True
 
     def get_state_at_point(self, x, y):
@@ -181,20 +207,58 @@ class Board(object):
     def get_state(self):
         return self._state
 
-
     def __eq__(self, other):
         """Override the default Equals behavior"""
-        for w in range(self.board_w):
-            for h in range(self.board_h):
-                if not other.get_state_at_point(w,h) == self.getState(w,h):
+        for w in range(self.N):
+            for h in range(self.N):
+                if not other.get_state_at_point(w,h) == self.N(w,h):
                     return False
         return True
 
-    def print_state(self):
-        for i in range(self.board_h):
-            str = "["
-            for j in range(self.board_w - 1):
-                str+= "%d," % self._state[j][i]
+    def legal(self,move):
+        arr = move.get_indeces()
+        xlist = arr[0]
+        ylist = arr[1]
+        assert (len(xlist) == len(ylist))
 
-            print str + "%d]" % self._state[self.board_w -1][i]
+        for index in range(len(xlist)):
+            x = xlist[index]
+            y = ylist[index]
+            if x < 0 or x >= self.board_w or y < 0 or y >= self.board.h:
+                return False
+        return True
 
+    def is_legal(self, x, y, player):
+        if not self.check_tile_legal(player, x, y):
+            return False
+
+        if self._connected[player.get_id()][y][x]:
+            return True
+
+        return False
+
+    def is_corner_available(self, player, x, y):
+        # for each state in the board
+        corners = 0
+
+        assert x < self.N and y < self.N
+
+        if self._state[x][y] != 1:
+            if not self._connected[player][x][y]:
+                if not self.adjacent_to_self(player, x, y):
+                    return True
+        return False
+
+
+def test_find_all_moves():
+    import pieces
+    plist = pieces.get_piece_list("valid_pieces.txt")
+
+    total = 0
+    for piece in plist:
+        print piece.get_id()
+        print len(piece.get_unique_indices())
+        total += len(piece.get_unique_indices())
+        #for indeces in piece.get_unique_indices():
+            #print indeces
+    print total

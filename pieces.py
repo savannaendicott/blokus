@@ -1,9 +1,7 @@
 """Classes and utilities to describe all of the game pieces.
 """
-import fileinput
 
-piece_names = ['singleSquare', 'twoPiece', 'line3', '3corner', 'l4', 'cube', 'L4', 'z4', 't4', 'line5', '-L', 'L5tall', 'z5', 'chunky5', 'T5', 'C5', 'L5', 'M5', 'X5', 'tree5', 'Z5']
-
+piece_names = ["line5","-L","L5tall","z5","chunky5","T5","C5","L5","M5","X5","tree5","Z5","l4","cube","L4","z4","t4","line3","3corner","twoPiece","singleSquare","X5"]
 def negateList(lst):
     """Helper function: negate every item in a list
     """
@@ -82,6 +80,34 @@ class Piece(object):
         """
         return self.pieceId
 
+    def get_unique_indices(self):
+        unique_states = []
+        for r in range(4):
+
+            tiles = []
+            state = self.get_states(r, False)
+            for i in range(len(state[0])):
+                tiles.append([state[0][i], state[1][i]])
+            if not self.pair_in_pairs(tiles, unique_states):
+                unique_states.append(tiles)
+
+            tiles = []
+            state = self.get_states(r, True)
+            for i in range(len(state[0])):
+                tiles.append([state[0][i], state[1][i]])
+            if not self.pair_in_pairs(tiles, unique_states):
+                unique_states.append(tiles)
+        return unique_states
+
+    def pair_in_pairs(self, tiles, sets_of_tiles):
+        if sets_of_tiles == []: return False
+        for set in sets_of_tiles:
+            num_found = 0
+            for tile in set:
+                if tile in tiles:
+                    num_found += 1
+            if num_found == len(set): return True
+        return False
     def get_tile(self, tile, x_offset=0, y_offset=0, rot=0, flip=False):
         """Return the (x,y) position of the <tile>th tile in this piece.
 
@@ -115,6 +141,7 @@ def get_piece_list(fname):
           - Line 2: L (number of lines in piece)
           - Lines 3 - L+1: layout of piece (# means tile, O means center)
         """
+
         pieces = []
         with open(fname) as f:
             lines = f.read().splitlines()
@@ -127,7 +154,6 @@ def get_piece_list(fname):
 
             x_list = []
             y_list = []
-
 
             pieceId = lines[L]
             num_lines = int(lines[L+1])
@@ -155,14 +181,33 @@ def get_piece_index(name):
         if piece_names[i] == name:
             return i
 
-def temp_updater():
-    with open('logs/test.txt', 'r') as file:
-        filedata = file.read()
+def get_piece_by_index(index):
+    p_list = get_piece_list("valid_pieces.txt")
+    return p_list[index]
 
-    for i in range(len(piece_names)):
-        filedata = filedata.replace(piece_names[i], str(i))
+def get_piece_by_id(self,id):
+    p_list = get_piece_list("valid_pieces.txt")
+    for piece in p_list:
+        if piece.get_id() == id:
+            return piece
+    return None
+
+def test_num_unique_positions():
+    piecelist = get_piece_list("valid_pieces_less.txt")
+    print "total pieces : %d" % len(piecelist)
+    total_unique = 0
+    for piece in piecelist:
+        unique = []
+        for rotation in range(4):
+            pos = piece.get_states(rotation, True)
+            if piece not in unique:
+                unique.append(pos)
+            pos = piece.get_states(rotation, False)
+            if piece not in unique:
+                unique.append(pos)
+        total_unique += len(unique)
+    print "total unique shapes: %d" % total_unique
 
 
-    # Write the file out again
-    with open('logs/ai-training.txt', 'a') as file:
-        file.write(filedata)
+if __name__ == "__main__":
+    test_num_unique_positions()

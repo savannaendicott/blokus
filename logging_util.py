@@ -1,7 +1,24 @@
 import logging
-import MoveGen
+import os
+from datetime import date
 
-POSSIBLE_MOVES = len(MoveGen.get_all_possible_dimensions())
+
+def fill_game_log(move, p, game_id):
+    dir_name = "logs/"+date.today().__str__()[5:]
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+
+    with open(dir_name +"/"+str(game_id)+".txt", 'a') as f:
+        f.write(str(p.get_id())+": " +  move.get().__str__() + "\n")
+
+def log_board_size(game_id, N):
+    assert isinstance(N, int)
+    dir_name = "logs/" + date.today().__str__()[5:]
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+
+    with open(dir_name + "/" + str(game_id) + ".txt", 'a') as f:
+        f.write(str(N) + "\n")
 
 class TrainingLog(object):
 
@@ -11,7 +28,7 @@ class TrainingLog(object):
         self.training = logging.getLogger('training')
         self.training.setLevel(logging.DEBUG)  # log all escalated at and above DEBUG
 
-        fh = logging.FileHandler('logs/ai-training-final.txt')
+        fh = logging.FileHandler('logs/input-features-and-moves.txt')
         fh.setLevel(logging.DEBUG)
         frmt = logging.Formatter('%(message)s')
         fh.setFormatter(frmt)
@@ -19,27 +36,27 @@ class TrainingLog(object):
             self.training.handlers = []
         self.training.addHandler(fh)
 
-        self.game_buffer = [[] for c in range(POSSIBLE_MOVES)]
+        self.game_buffer = []
 
-    def end_game_log(self, won, game_id):
-        for index in range(POSSIBLE_MOVES):
-            if not self.game_buffer[index] == []:
-                self.game_buffer[index].append(1 if self.game_buffer[index][0] == won else 0)
-            else:
-                self.game_buffer[index].append(-1)
-        self.training.debug(str(game_id) + ": " + self.game_buffer.__str__())
-        self.game_buffer = [[] for c in range(POSSIBLE_MOVES)]
+    def end_game_log(self, won):
+        game_id = get_next_game_id()
+        game_str = ""
+        for move in self.game_buffer:
+            game_str += move.__str__()
 
-    def training_input(self, move, properties):
-        # position = MoveGen.get_index(move.get_configurations_with_piece())
-        position = MoveGen.find_move(move)
-        if position is not None and position not in self.seen:
-            self.seen.append(position)
-            properties.append(move.get_piece().get_num_tiles())
-            properties.append(move.get_indeces()[0][0])
-            properties.append(move.get_indeces()[1][0])
-            for p in properties:
-                self.game_buffer[position].append(int(p))
+        self.training.debug(str(game_id) + ";"+str(won) + ";"+ game_str)
+        self.game_buffer = []
+
+    def training_input(self, board, move):
+        board_str = board.get_state()
+        move_str = move.get()
+        properties = [move_str, board_str]
+        self.game_buffer.append(properties)
+
+    def log_move(self, move):
+        with open("moves-random.txt", 'a') as f:
+            f.write(move.get().__str__() + "\n")
+
 
     def log_game(self, string):
         with open("gamelogger.txt", 'a') as f:
@@ -49,25 +66,14 @@ class TrainingLog(object):
         with open("gamelogger.txt", 'a') as f:
             f.write("\n\n\n\n\n ------------------------\n")
 
-class LoggingUtil:
-
-    @staticmethod
-    def get_index(arr, obj):
-        for i in range(arr.__len__()):
-            if arr[i] == obj:
-                return i
-        return -1
-
-    @staticmethod
-    def get_next_game_id():
+def get_next_game_id():
         with open('logs/game_index.txt', 'r+') as f:
             value = int(f.read()) + 1
             f.seek(0)
             f.write(str(value))
         return value
 
-    @staticmethod
-    def get_next_move_id():
+def get_next_move_id():
         with open('logs/move_index.txt', 'r+') as f:
             value = int(f.read()) + 1
             f.seek(0)
@@ -89,3 +95,6 @@ def get_num_lines_in_file(filename):
         for line in f:
             counter +=1
     return counter
+
+
+
